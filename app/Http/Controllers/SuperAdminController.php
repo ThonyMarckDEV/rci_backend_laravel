@@ -23,6 +23,8 @@ use App\Models\Modelo;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
+
 
 class SuperAdminController extends Controller
 {
@@ -515,6 +517,83 @@ class SuperAdminController extends Controller
         ], 200);
     }
 
+    public function editarModeloyImagen(Request $request, $id)
+    {
+        try {
+            // Validar los datos
+            $request->validate([
+                'nombreModelo' => 'required|string|max:255',
+                'descripcion' => 'required|string|nullable',
+                'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:5120'
+            ]);
+
+            // Buscar el modelo
+            $modelo = Modelo::findOrFail($id);
+            $producto = $modelo->producto;
+
+            // Crear el directorio base si no existe
+            $baseDirectory = 'imagenes/productos/' . Str::slug($producto->nombreProducto) . '/modelos/' . Str::slug($request->nombreModelo);
+            Storage::disk('public')->makeDirectory($baseDirectory);
+
+            // Actualizar datos básicos
+            $modelo->nombreModelo = $request->nombreModelo;
+            $modelo->save();
+
+            // Procesar imagen si se proporciona una nueva
+            if ($request->hasFile('imagen')) {
+                $imagen = $request->file('imagen');
+                
+                // Generar nombre único para la imagen
+                $nombreImagen = time() . '_' . Str::slug($imagen->getClientOriginalName());
+                $rutaImagen = $baseDirectory . '/' . $nombreImagen;
+
+                // Eliminar imagen anterior si existe
+                if ($modelo->imagenes()->exists()) {
+                    $imagenAnterior = $modelo->imagenes()->first();
+                    if ($imagenAnterior && Storage::disk('public')->exists($imagenAnterior->urlImagen)) {
+                        Storage::disk('public')->delete($imagenAnterior->urlImagen);
+                    }
+                    $imagenAnterior?->delete();
+                }
+
+                // Guardar la nueva imagen
+                try {
+                    Storage::disk('public')->putFileAs(
+                        $baseDirectory,
+                        $imagen,
+                        $nombreImagen
+                    );
+
+                    // Crear o actualizar el registro de imagen
+                    ImagenModelo::create([
+                        'idModelo' => $modelo->idModelo,
+                        'urlImagen' => $rutaImagen,
+                        'descripcion' => 'Imagen del modelo ' . $modelo->nombreModelo
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Error al guardar la imagen: ' . $e->getMessage());
+                    throw new \Exception('Error al procesar la imagen');
+                }
+            }
+
+            return response()->json([
+                'message' => 'Modelo actualizado correctamente',
+                'modelo' => $modelo->load('imagenes')
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'message' => 'Error de validación',
+                'errors' => $e->errors()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Error en editarModeloyImagen: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Error al actualizar el modelo',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
     
     public function agregarCategorias(Request $request)
     {
