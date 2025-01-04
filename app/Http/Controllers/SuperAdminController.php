@@ -324,156 +324,6 @@ class SuperAdminController extends Controller
         return response()->json(['success' => true, 'data' => $productos], 200);
     }
 
-    
-    public function listarProductos(Request $request)
-    {
-        // Obtener los parámetros de la solicitud
-        $categoriaId = $request->input('categoria');
-        $texto = $request->input('texto');
-        $idProducto = $request->input('idProducto');
-        $precioInicial = $request->input('precioInicial');
-        $precioFinal = $request->input('precioFinal');
-
-        // Construir la consulta para obtener los productos con relaciones
-        $query = Producto::with([
-            'categoria:idCategoria,nombreCategoria,estado', // Incluir el campo 'estado' de la categoría
-            'modelos' => function($query) {
-                $query->with([
-                    'imagenes:idImagen,urlImagen,idModelo',
-                    'stock' => function($query) {
-                        $query->with('talla:idTalla,nombreTalla');
-                    }
-                ]);
-            },
-            'ofertas' => function($query) {
-                $query->where('estado', 1) // Ofertas activas
-                    ->where('fechaInicio', '<=', now())
-                    ->where('fechaFin', '>=', now());
-            }
-        ]);
-
-        // Filtrar por estado 'activo' en la tabla 'productos'
-        $query->where('estado', 'activo');
-
-        // Filtrar por estado 'activo' en la tabla 'categorias'
-        $query->whereHas('categoria', function($q) {
-            $q->where('estado', 'activo');
-        });
-
-        // Filtrar por idProducto si el parámetro 'idProducto' existe
-        if ($idProducto) {
-            $query->where('idProducto', $idProducto);
-        }
-
-        // Filtrar por categoría si el parámetro 'categoria' existe
-        if ($categoriaId) {
-            $query->where('idCategoria', $categoriaId);
-        }
-
-        // Filtrar por texto en el nombre del producto si el parámetro 'texto' existe
-        if ($texto) {
-            $query->where('nombreProducto', 'like', '%' . $texto . '%');
-        }
-
-        // Filtrar por rango de precios si se proporcionan
-        if ($precioInicial !== null && $precioFinal !== null) {
-            $query->whereBetween('precio', [$precioInicial, $precioFinal]);
-        }
-
-        // Obtener los productos
-        $productos = $query->get();
-
-        // Si se pasó un 'idProducto', se devuelve un solo producto
-        if ($idProducto) {
-            $producto = $productos->first();
-
-            if ($producto) {
-                // Verificar si el producto tiene una oferta activa
-                $precioOriginal = $producto->precio;
-                $precioDescuento = $precioOriginal;
-                $ofertaActiva = $producto->ofertas->first();
-
-                if ($ofertaActiva) {
-                    $descuento = $ofertaActiva->porcentajeDescuento;
-                    $precioDescuento = $precioOriginal * (1 - ($descuento / 100));
-                }
-
-                $productoData = [
-                    'idProducto' => $producto->idProducto,
-                    'nombreProducto' => $producto->nombreProducto,
-                    'descripcion' => $producto->descripcion,
-                    'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
-                    'precioOriginal' => $precioOriginal,
-                    'precioDescuento' => $precioDescuento,
-                    'tieneOferta' => !!$ofertaActiva,
-                    'modelos' => $producto->modelos->map(function($modelo) {
-                        return [
-                            'idModelo' => $modelo->idModelo,
-                            'nombreModelo' => $modelo->nombreModelo,
-                            'imagenes' => $modelo->imagenes->map(function($imagen) {
-                                return [
-                                    'urlImagen' => $imagen->urlImagen
-                                ];
-                            }),
-                            'tallas' => $modelo->stock->map(function($stock) {
-                                return [
-                                    'idTalla' => $stock->talla->idTalla,
-                                    'nombreTalla' => $stock->talla->nombreTalla,
-                                    'cantidad' => $stock->cantidad
-                                ];
-                            })
-                        ];
-                    })
-                ];
-
-                return response()->json(['data' => $productoData], 200);
-            } else {
-                return response()->json(['message' => 'Producto no encontrado'], 404);
-            }
-        }
-
-        // Si no se pasó un 'idProducto', devolver todos los productos
-        $productosData = $productos->map(function($producto) {
-            $precioOriginal = $producto->precio;
-            $precioDescuento = $precioOriginal;
-            $ofertaActiva = $producto->ofertas->first();
-
-            if ($ofertaActiva) {
-                $descuento = $ofertaActiva->porcentajeDescuento;
-                $precioDescuento = $precioOriginal * (1 - ($descuento / 100));
-            }
-
-            return [
-                'idProducto' => $producto->idProducto,
-                'nombreProducto' => $producto->nombreProducto,
-                'descripcion' => $producto->descripcion,
-                'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
-                'precioOriginal' => $precioOriginal,
-                'precioDescuento' => $precioDescuento,
-                'tieneOferta' => !!$ofertaActiva,
-                'modelos' => $producto->modelos->map(function($modelo) {
-                    return [
-                        'idModelo' => $modelo->idModelo,
-                        'nombreModelo' => $modelo->nombreModelo,
-                        'imagenes' => $modelo->imagenes->map(function($imagen) {
-                            return [
-                                'urlImagen' => $imagen->urlImagen
-                            ];
-                        }),
-                        'tallas' => $modelo->stock->map(function($stock) {
-                            return [
-                                'idTalla' => $stock->talla->idTalla,
-                                'nombreTalla' => $stock->talla->nombreTalla,
-                                'cantidad' => $stock->cantidad
-                            ];
-                        })
-                    ];
-                })
-            ];
-        });
-
-        return response()->json(['data' => $productosData], 200);
-    }
 
     public function listarCategoriasProductos()
     {
@@ -560,6 +410,112 @@ class SuperAdminController extends Controller
         }
     }
 
+    public function listarProductos(Request $request)
+    {
+        // Obtener los parámetros de la solicitud
+        $categoriaId = $request->input('categoria');
+        $texto = $request->input('texto');
+        $idProducto = $request->input('idProducto');
+        $perPage = $request->input('perPage', 10); // Número de elementos por página
+    
+        // Construir la consulta para obtener los productos con relaciones
+        $query = Producto::with([
+            'categoria:idCategoria,nombreCategoria,estado', // Incluir el campo 'estado' de la categoría
+            'modelos' => function($query) {
+                $query->with([
+                    'imagenes:idImagen,urlImagen,idModelo'
+                ]);
+            }
+        ]);
+    
+        // Filtrar por estado 'activo' en la tabla 'productos'
+        $query->where('estado', 'activo');
+    
+        // Filtrar por estado 'activo' en la tabla 'categorias'
+        $query->whereHas('categoria', function($q) {
+            $q->where('estado', 'activo');
+        });
+    
+        // Filtrar por idProducto si el parámetro 'idProducto' existe
+        if ($idProducto) {
+            $query->where('idProducto', $idProducto);
+        }
+    
+        // Filtrar por categoría si el parámetro 'categoria' existe
+        if ($categoriaId) {
+            $query->where('idCategoria', $categoriaId);
+        }
+    
+        // Filtrar por texto en el nombre del producto si el parámetro 'texto' existe
+        if ($texto) {
+            $query->where('nombreProducto', 'like', '%' . $texto . '%');
+        }
+    
+        // Paginar los resultados
+        $productos = $query->paginate($perPage);
+    
+        // Si se pasó un 'idProducto', se devuelve un solo producto
+        if ($idProducto) {
+            $producto = $productos->first();
+    
+            if ($producto) {
+                $productoData = [
+                    'idProducto' => $producto->idProducto,
+                    'nombreProducto' => $producto->nombreProducto,
+                    'descripcion' => $producto->descripcion,
+                    'estado' => $producto->estado,
+                    'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
+                    'modelos' => $producto->modelos->map(function($modelo) {
+                        return [
+                            'idModelo' => $modelo->idModelo,
+                            'nombreModelo' => $modelo->nombreModelo,
+                            'imagenes' => $modelo->imagenes->map(function($imagen) {
+                                return [
+                                    'urlImagen' => $imagen->urlImagen
+                                ];
+                            })
+                        ];
+                    })
+                ];
+    
+                return response()->json(['data' => $productoData], 200);
+            } else {
+                return response()->json(['message' => 'Producto no encontrado'], 404);
+            }
+        }
+    
+        // Si no se pasó un 'idProducto', devolver todos los productos paginados
+        $productosData = $productos->map(function($producto) {
+            return [
+                'idProducto' => $producto->idProducto,
+                'nombreProducto' => $producto->nombreProducto,
+                'descripcion' => $producto->descripcion ? : 'N/A',
+                'estado' => $producto->estado,
+                'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
+                'modelos' => $producto->modelos->map(function($modelo) {
+                    return [
+                        'idModelo' => $modelo->idModelo,
+                        'nombreModelo' => $modelo->nombreModelo,
+                        'imagenes' => $modelo->imagenes->map(function($imagen) {
+                            return [
+                                'urlImagen' => $imagen->urlImagen
+                            ];
+                        })
+                    ];
+                })
+            ];
+        });
+    
+        return response()->json([
+            'data' => $productosData,
+            'current_page' => $productos->currentPage(),
+            'last_page' => $productos->lastPage(),
+            'per_page' => $productos->perPage(),
+            'total' => $productos->total(),
+        ], 200);
+    }
+
+    
     public function agregarCategorias(Request $request)
     {
         // Validar los datos de entrada

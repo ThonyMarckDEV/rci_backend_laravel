@@ -61,6 +61,7 @@ use App\Http\Controllers\SuperAdminController;
 
         Route::get('/categoriasproductos', [SuperAdminController::class, 'listarCategoriasproductos']);
         Route::post('/agregarProductos', [SuperAdminController::class, 'agregarProducto']);
+        Route::get('/listarProductos/{id}', [SuperAdminController::class, 'listarProductos']);
 
         Route::post('/categorias', [SuperAdminController::class, 'agregarCategorias']);
         Route::get('/obtenerCategorias', [SuperAdminController::class, 'obtenerCategorias']);
