@@ -85,59 +85,121 @@ class SuperAdminController extends Controller
      // Editar usuario
      public function editarUsuario(Request $request, $id)
      {
-         // Validar los datos de entrada
+         Log::info('Iniciando actualización de usuario', ['usuario_id' => $id, 'data' => $request->all()]);
+     
+         // Traducción de campos
+         $request->merge([
+             'correo' => $request->input('email'),
+             'rol' => $request->input('role'),
+         ]);
+     
          $validator = Validator::make($request->all(), [
              'nombres' => 'sometimes|string|max:255',
              'apellidos' => 'sometimes|string|max:255',
-             'correo' => 'sometimes|email|unique:usuarios,correo,' . $id,
+             'correo' => 'sometimes|email|unique:usuarios,correo,' . $id . ',idUsuario',
              'password' => 'sometimes|string|min:6',
              'rol' => 'sometimes|string|max:255',
          ]);
- 
-         // Si la validación falla, retornar errores
+     
          if ($validator->fails()) {
+             Log::error('Validación fallida', ['errors' => $validator->errors()]);
              return response()->json([
                  'success' => false,
                  'message' => 'Error de validación',
                  'errors' => $validator->errors(),
              ], 422);
          }
- 
-         // Buscar el usuario por ID
+     
          $user = Usuario::find($id);
          if (!$user) {
+             Log::warning('Usuario no encontrado', ['usuario_id' => $id]);
              return response()->json([
                  'success' => false,
                  'message' => 'Usuario no encontrado',
              ], 404);
          }
- 
-         // Actualizar los campos proporcionados
-         if ($request->has('nombres')) {
+     
+         $usuarioId = auth()->id();
+         $usuario = Usuario::find($usuarioId);
+         $nombreUsuario = $usuario ? $usuario->nombres . ' ' . $usuario->apellidos : 'Desconocido';
+     
+         $camposActualizados = false;
+     
+         // Nombres
+         if ($request->filled('nombres') && $user->nombres !== $request->nombres) {
+             $nombreAntiguo = $user->nombres;
              $user->nombres = $request->nombres;
+             $user->save();
+     
+             $accion = "$nombreUsuario actualizó el nombre del usuario de '$nombreAntiguo' a '{$request->nombres}'";
+             $this->agregarLog($usuarioId, $accion);
+             Log::info('Nombre actualizado', ['nuevo' => $request->nombres]);
+             $camposActualizados = true;
          }
-         if ($request->has('apellidos')) {
+     
+         // Apellidos
+         if ($request->filled('apellidos') && $user->apellidos !== $request->apellidos) {
+             $apellidoAntiguo = $user->apellidos;
              $user->apellidos = $request->apellidos;
+             $user->save();
+     
+             $accion = "$nombreUsuario actualizó el apellido del usuario de '$apellidoAntiguo' a '{$request->apellidos}'";
+             $this->agregarLog($usuarioId, $accion);
+             Log::info('Apellido actualizado', ['nuevo' => $request->apellidos]);
+             $camposActualizados = true;
          }
-         if ($request->has('correo')) {
+     
+         // Correo
+         if ($request->filled('correo') && $user->correo !== $request->correo) {
+             $correoAntiguo = $user->correo;
              $user->correo = $request->correo;
+             $user->save();
+     
+             $accion = "$nombreUsuario actualizó el correo del usuario de '$correoAntiguo' a '{$request->correo}'";
+             $this->agregarLog($usuarioId, $accion);
+             Log::info('Correo actualizado', ['nuevo' => $request->correo]);
+             $camposActualizados = true;
          }
-         if ($request->has('password')) {
+     
+         // Contraseña
+         if ($request->filled('password')) {
              $user->password = bcrypt($request->password);
+             $user->save();
+     
+             $accion = "$nombreUsuario actualizó la contraseña del usuario.";
+             $this->agregarLog($usuarioId, $accion);
+             Log::info('Contraseña actualizada');
+             $camposActualizados = true;
          }
-         if ($request->has('rol')) {
+     
+         // Rol
+         if ($request->filled('rol') && $user->rol !== $request->rol) {
+             $rolAntiguo = $user->rol;
              $user->rol = $request->rol;
+             $user->save();
+     
+             $accion = "$nombreUsuario actualizó el rol del usuario de '$rolAntiguo' a '{$request->rol}'";
+             $this->agregarLog($usuarioId, $accion);
+             Log::info('Rol actualizado', ['nuevo' => $request->rol]);
+             $camposActualizados = true;
          }
- 
-         $user->save();
- 
-         // Retornar una respuesta exitosa
+     
+         // Respuesta
+         if ($camposActualizados) {
+             return response()->json([
+                 'success' => true,
+                 'message' => 'Usuario actualizado exitosamente',
+                 'user' => $user,
+             ]);
+         }
+     
          return response()->json([
              'success' => true,
-             'message' => 'Usuario actualizado exitosamente',
+             'message' => 'No se realizaron cambios',
              'user' => $user,
          ]);
      }
+     
 
      public function listarUsuarios(Request $request)
      {
