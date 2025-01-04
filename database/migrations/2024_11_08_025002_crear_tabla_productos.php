@@ -14,7 +14,6 @@ class CrearTablaProductos extends Migration
             $table->bigIncrements('idProducto');
             $table->string('nombreProducto');
             $table->string('descripcion', 60)->nullable();
-            $table->decimal('precio', 8, 2);
             // Nueva columna 'estado' de tipo string con valor predeterminado 'activo'
             $table->string('estado')->default('activo');
 

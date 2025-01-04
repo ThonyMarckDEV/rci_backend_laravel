@@ -18,7 +18,6 @@ class Modelo extends Model
 
     protected $fillable = [
         'nombreModelo',
-        'descripcion',
         'idProducto', // Clave foránea hacia productos
     ];
 
@@ -32,17 +31,5 @@ class Modelo extends Model
     public function imagenes()
     {
         return $this->hasMany(ImagenModelo::class, 'idModelo', 'idModelo');
-    }
-
-    // Relación con el stock
-    public function stock()
-    {
-        return $this->hasMany(Stock::class, 'idModelo', 'idModelo');
-    }
-
-    // Relación con Talla a través de la tabla stock (muchos a muchos)
-    public function tallas()
-    {
-        return $this->belongsToMany(Talla::class, 'stock', 'idModelo', 'idTalla');
     }
 }

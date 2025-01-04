@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ImagenModelo;
 use App\Models\Talla;
 use App\Models\Usuario;
 use App\Models\Categoria;
@@ -18,6 +19,7 @@ use FPDF;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Response;
 use App\Models\Facturacion;
+use App\Models\Modelo;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -473,91 +475,89 @@ class SuperAdminController extends Controller
         return response()->json(['data' => $productosData], 200);
     }
 
-
-    // Crear un nuevo producto
-    public function agregarProducto(Request $request)
+    public function listarCategoriasProductos()
     {
-        // Validar los datos de entrada, incluyendo el tipo de archivo de imagen
-        $request->validate([
-            'nombreProducto' => 'required|string|max:255',
-            'descripcion' => 'nullable|string',
-            'precio' => 'required|numeric',
-            'stock' => 'required|integer',
-            'imagen' => 'nullable|mimes:jpeg,jpg,png,gif|max:2048', // Solo formatos de imagen permitidos
-            'idCategoria' => 'required|exists:categorias,idCategoria',
-        ]);
-
-        // Crear un nuevo producto sin la imagen
-        $productoData = $request->except('imagen');
-
-        // Guardar la imagen si se proporciona
-        if ($request->hasFile('imagen')) {
-            $path = $request->file('imagen')->store('imagenes', 'public');
-            $productoData['imagen'] = $path;
-        }
-
-        // Crear el producto con los datos obtenidos
-        $producto = Producto::create($productoData);
-
-        return response()->json([
-            'success' => true, 
-            'message' => 'Producto creado exitosamente', 
-            'data' => $producto
-        ], 201);
+        // Filtrar categorías con estado "activo"
+        $categorias = Categoria::where('estado', 'activo')->get();
+        return response()->json($categorias);
     }
 
-        // Actualizar un producto
-        public function actualizarProducto(Request $request, $id)
-        {
-            // Validación de los datos entrantes, incluyendo los tipos de archivo de imagen
-            $request->validate([
-                'nombreProducto' => 'required|string|max:255',
-                'descripcion' => 'nullable|string',
-                'precio' => 'required|numeric',
-                'stock' => 'required|integer',
-                'imagen' => 'nullable|mimes:jpeg,jpg,png,gif|max:2048', // Solo formatos de imagen permitidos
-                'idCategoria' => 'required|exists:categorias,idCategoria',
+    public function agregarProducto(Request $request)
+    {
+        $request->validate([
+            'nombreProducto' => 'required',
+            'descripcion' => 'nullable', // Descripción opcional
+            'estado' => 'required',
+            'idCategoria' => 'required|exists:categorias,idCategoria',
+            'modelos' => 'required|array', // Asegúrate de que se envíe un array de modelos
+            'modelos.*.nombreModelo' => 'required', // Nombre del modelo obligatorio
+            'modelos.*.imagen' => 'required|image', // Imagen del modelo obligatoria
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Crear el producto
+            $producto = Producto::create([
+                'nombreProducto' => $request->nombreProducto,
+                'descripcion' => $request->descripcion,
+                'estado' => $request->estado,
+                'idCategoria' => $request->idCategoria
             ]);
 
-            // Buscar el producto por ID
-            $producto = Producto::findOrFail($id);
+            // Crear los modelos
+            foreach ($request->modelos as $modeloData) {
+                $modelo = Modelo::create([
+                    'idProducto' => $producto->idProducto,
+                    'nombreModelo' => $modeloData['nombreModelo']
+                ]);
 
-            // Procesar la nueva imagen si se proporciona
-            if ($request->hasFile('imagen')) {
-                // Eliminar la imagen anterior si existe
-                if ($producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
-                    Storage::disk('public')->delete($producto->imagen);
+                // Procesar la imagen de cada modelo
+                if (isset($modeloData['imagen'])) {
+                    $imagen = $modeloData['imagen'];
+                    $nombreProducto = $producto->nombreProducto;
+                    $nombreModelo = $modelo->nombreModelo;
+
+                    // Ruta para guardar la imagen
+                    $rutaImagen = 'imagenes/productos/' . $nombreProducto . '/modelos/' . $nombreModelo . '/' . $imagen->getClientOriginalName();
+
+                    // Guardar en el disco 'public'
+                    Storage::disk('public')->putFileAs(
+                        'imagenes/productos/' . $nombreProducto . '/modelos/' . $nombreModelo,
+                        $imagen,
+                        $imagen->getClientOriginalName()
+                    );
+
+                    // Guardar solo la ruta relativa
+                    $rutaImagenBD = str_replace('public/', '', $rutaImagen);
+
+                    // Crear la imagen del modelo
+                    ImagenModelo::create([
+                        'idModelo' => $modelo->idModelo,
+                        'urlImagen' => $rutaImagenBD,
+                        'descripcion' => 'Imagen del modelo ' . $nombreModelo
+                    ]);
                 }
-
-                // Guardar la nueva imagen y actualizar la ruta en el producto
-                $path = $request->file('imagen')->store('imagenes', 'public');
-                $producto->imagen = $path;
             }
 
-            // Actualizar otros campos del producto
-            $producto->nombreProducto = $request->nombreProducto;
-            $producto->descripcion = $request->descripcion;
-            $producto->precio = $request->precio;
-            $producto->stock = $request->stock;
-            $producto->idCategoria = $request->idCategoria;
-            
-            // Guardar los cambios
-            $producto->save();
+            DB::commit();
 
             return response()->json([
-                'success' => true, 
-                'message' => 'Producto actualizado exitosamente', 
-                'data' => $producto
-            ], 200);
+                'message' => 'Producto agregado correctamente',
+                'producto' => $producto
+            ], 201);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Imprime el error en los logs
+            Log::error('Error al agregar el producto: ' . $e->getMessage());
+
+            return response()->json([
+                'message' => 'Error al agregar el producto',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-
-    // Eliminar un producto
-    public function eliminarProducto($id)
-    {
-        $producto = Producto::findOrFail($id);
-        $producto->delete();
-        return response()->json(['success' => true, 'message' => 'Producto eliminado exitosamente'], 200);
     }
 
     public function agregarCategorias(Request $request)
@@ -604,6 +604,55 @@ class SuperAdminController extends Controller
             'message' => 'Categoría agregada exitosamente',
             'categoria' => $categoria
         ], 200);
+    }
+
+    public function obtenerCategoriasProducto(Request $request)
+    {
+        // Obtener los parámetros de paginación
+        $page = $request->input('page', 1); // Página actual, por defecto 1
+        $limit = $request->input('limit', 5); // Límite de elementos por página, por defecto 5
+    
+        // Obtener los parámetros de filtro y búsqueda
+        $idCategoria = $request->input('idCategoria', '');
+        $nombreCategoria = $request->input('nombreCategoria', '');
+        $descripcion = $request->input('descripcion', '');
+        $estado = $request->input('estado', '');
+        $searchTerm = $request->input('searchTerm', '');
+    
+        // Construir la consulta
+        $query = Categoria::query();
+    
+        // Aplicar filtros
+        if ($idCategoria) {
+            $query->where('idCategoria', 'like', "%{$idCategoria}%");
+        }
+        if ($nombreCategoria) {
+            $query->where('nombreCategoria', 'like', "%{$nombreCategoria}%");
+        }
+        if ($descripcion) {
+            $query->where('descripcion', 'like', "%{$descripcion}%");
+        }
+        if ($estado) {
+            $query->where('estado', 'like', "%{$estado}%");
+        }
+        if ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('idCategoria', 'like', "%{$searchTerm}%")
+                  ->orWhere('nombreCategoria', 'like', "%{$searchTerm}%")
+                  ->orWhere('descripcion', 'like', "%{$searchTerm}%")
+                  ->orWhere('estado', 'like', "%{$searchTerm}%");
+            });
+        }
+    
+        // Paginar los resultados
+        $categorias = $query->paginate($limit, ['*'], 'page', $page);
+    
+        return response()->json([
+            'data' => $categorias->items(), // Datos de la página actual
+            'total' => $categorias->total(), // Total de registros
+            'page' => $categorias->currentPage(), // Página actual
+            'totalPages' => $categorias->lastPage(), // Total de páginas
+        ]);
     }
 
 

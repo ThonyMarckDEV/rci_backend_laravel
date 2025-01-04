@@ -20,7 +20,6 @@ class Producto extends Model
     protected $fillable = [
         'nombreProducto',
         'descripcion',
-        'precio',
         'idCategoria', // Clave foránea hacia la tabla categorias
         'estado'
     ];
@@ -36,19 +35,5 @@ class Producto extends Model
      {
          return $this->hasMany(Modelo::class, 'idProducto', 'idProducto');
      }
-
-
-    public function stocks()
-    {
-        return $this->hasManyThrough(
-            Stock::class, 
-            Modelo::class,
-            'idProducto', // Clave foránea de Producto en Modelo
-            'idModelo',   // Clave foránea de Modelo en Stock
-            'idProducto', // Clave primaria de Producto
-            'idModelo'    // Clave primaria de Modelo
-        );
-    }
-
 
 }
