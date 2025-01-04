@@ -516,7 +516,6 @@ class SuperAdminController extends Controller
             'total' => $productos->total(),
         ], 200);
     }
-
     public function editarModeloyImagen(Request $request, $id)
     {
         try {
@@ -526,27 +525,31 @@ class SuperAdminController extends Controller
                 'descripcion' => 'required|string|nullable',
                 'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:5120'
             ]);
-
+    
             // Buscar el modelo
             $modelo = Modelo::findOrFail($id);
             $producto = $modelo->producto;
-
+    
             // Crear el directorio base si no existe
-            $baseDirectory = 'imagenes/productos/' . Str::slug($producto->nombreProducto) . '/modelos/' . Str::slug($request->nombreModelo);
+            $baseDirectory = 'imagenes/productos/' . $producto->nombreProducto . '/modelos';
             Storage::disk('public')->makeDirectory($baseDirectory);
-
+    
+            // Obtener el nombre del modelo actual y nuevo
+            $oldModeloName = $modelo->nombreModelo;
+            $newModeloName = $request->nombreModelo;
+    
             // Actualizar datos básicos
-            $modelo->nombreModelo = $request->nombreModelo;
+            $modelo->nombreModelo = $newModeloName;
             $modelo->save();
-
+    
             // Procesar imagen si se proporciona una nueva
             if ($request->hasFile('imagen')) {
                 $imagen = $request->file('imagen');
-                
+    
                 // Generar nombre único para la imagen
-                $nombreImagen = time() . '_' . Str::slug($imagen->getClientOriginalName());
-                $rutaImagen = $baseDirectory . '/' . $nombreImagen;
-
+                $nombreImagen = time() . '_' . $imagen->getClientOriginalName();
+                $rutaImagen = $baseDirectory . '/' . $newModeloName . '/' . $nombreImagen;
+    
                 // Eliminar imagen anterior si existe
                 if ($modelo->imagenes()->exists()) {
                     $imagenAnterior = $modelo->imagenes()->first();
@@ -555,32 +558,51 @@ class SuperAdminController extends Controller
                     }
                     $imagenAnterior?->delete();
                 }
-
+    
                 // Guardar la nueva imagen
                 try {
+                    // Verificar si el directorio del nuevo modelo ya existe
+                    $newModeloDirectory = $baseDirectory . '/' . $newModeloName;
+                    if (!Storage::disk('public')->exists($newModeloDirectory)) {
+                        Storage::disk('public')->makeDirectory($newModeloDirectory);
+                    }
+    
+                    // Guardar la imagen en el directorio del nuevo modelo
                     Storage::disk('public')->putFileAs(
-                        $baseDirectory,
+                        $newModeloDirectory,
                         $imagen,
                         $nombreImagen
                     );
-
+    
                     // Crear o actualizar el registro de imagen
                     ImagenModelo::create([
                         'idModelo' => $modelo->idModelo,
                         'urlImagen' => $rutaImagen,
-                        'descripcion' => 'Imagen del modelo ' . $modelo->nombreModelo
+                        'descripcion' => 'Imagen del modelo ' . $newModeloName
                     ]);
                 } catch (\Exception $e) {
                     Log::error('Error al guardar la imagen: ' . $e->getMessage());
                     throw new \Exception('Error al procesar la imagen');
                 }
             }
-
+    
+            // Si el nombre del modelo ha cambiado, solo renombrar el directorio
+            if ($oldModeloName !== $newModeloName) {
+                $oldModeloDirectory = $baseDirectory . '/' . $oldModeloName;
+                $newModeloDirectory = $baseDirectory . '/' . $newModeloName;
+    
+                // Verificar si el directorio antiguo existe
+                if (Storage::disk('public')->exists($oldModeloDirectory)) {
+                    // Renombrar el directorio
+                    Storage::disk('public')->move($oldModeloDirectory, $newModeloDirectory);
+                }
+            }
+    
             return response()->json([
                 'message' => 'Modelo actualizado correctamente',
                 'modelo' => $modelo->load('imagenes')
             ]);
-
+    
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'message' => 'Error de validación',
@@ -594,7 +616,6 @@ class SuperAdminController extends Controller
             ], 500);
         }
     }
-    
     public function agregarCategorias(Request $request)
     {
         // Validar los datos de entrada
