@@ -12,7 +12,7 @@ class CrearTablaImagenModelos extends Migration
             $table->id('idImagen');
             $table->unsignedBigInteger('idModelo'); // Relación con la tabla modelos
             $table->foreign('idModelo')->references('idModelo')->on('modelos'); // Relación con idModelo
-            $table->string('urlImagen');
+            $table->string('urlImagen')->nullable();
             $table->string('descripcion')->nullable();
         });
     }
