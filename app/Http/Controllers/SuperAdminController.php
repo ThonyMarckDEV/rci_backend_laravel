@@ -516,92 +516,243 @@ class SuperAdminController extends Controller
             'total' => $productos->total(),
         ], 200);
     }
+    // public function editarModeloyImagen(Request $request, $id)
+    // {
+    //     try {
+    //         // Validar los datos
+    //         $request->validate([
+    //             'nombreModelo' => 'required|string|max:255',
+    //             'descripcion' => 'required|string|nullable',
+    //             'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:5120'
+    //         ]);
+    
+    //         // Buscar el modelo
+    //         $modelo = Modelo::findOrFail($id);
+    //         $producto = $modelo->producto;
+    
+    //         // Crear el directorio base si no existe
+    //         $baseDirectory = 'imagenes/productos/' . $producto->nombreProducto . '/modelos';
+    //         Storage::disk('public')->makeDirectory($baseDirectory);
+    
+    //         // Obtener el nombre del modelo actual y nuevo
+    //         $oldModeloName = $modelo->nombreModelo;
+    //         $newModeloName = $request->nombreModelo;
+    
+    //         // Actualizar datos básicos
+    //         $modelo->nombreModelo = $newModeloName;
+    //         $modelo->save();
+    
+    //         // Procesar imagen si se proporciona una nueva
+    //         if ($request->hasFile('imagen')) {
+    //             $imagen = $request->file('imagen');
+    
+    //             // Generar nombre único para la imagen
+    //             $nombreImagen = time() . '_' . $imagen->getClientOriginalName();
+    //             $rutaImagen = $baseDirectory . '/' . $newModeloName . '/' . $nombreImagen;
+    
+    //             // Eliminar imagen anterior si existe
+    //             if ($modelo->imagenes()->exists()) {
+    //                 $imagenAnterior = $modelo->imagenes()->first();
+    //                 if ($imagenAnterior && Storage::disk('public')->exists($imagenAnterior->urlImagen)) {
+    //                     Storage::disk('public')->delete($imagenAnterior->urlImagen);
+    //                 }
+    //                 $imagenAnterior?->delete();
+    //             }
+    
+    //             // Guardar la nueva imagen
+    //             try {
+    //                 // Verificar si el directorio del nuevo modelo ya existe
+    //                 $newModeloDirectory = $baseDirectory . '/' . $newModeloName;
+    //                 if (!Storage::disk('public')->exists($newModeloDirectory)) {
+    //                     Storage::disk('public')->makeDirectory($newModeloDirectory);
+    //                 }
+    
+    //                 // Guardar la imagen en el directorio del nuevo modelo
+    //                 Storage::disk('public')->putFileAs(
+    //                     $newModeloDirectory,
+    //                     $imagen,
+    //                     $nombreImagen
+    //                 );
+    
+    //                 // Crear o actualizar el registro de imagen
+    //                 ImagenModelo::create([
+    //                     'idModelo' => $modelo->idModelo,
+    //                     'urlImagen' => $rutaImagen,
+    //                     'descripcion' => 'Imagen del modelo ' . $newModeloName
+    //                 ]);
+    //             } catch (\Exception $e) {
+    //                 Log::error('Error al guardar la imagen: ' . $e->getMessage());
+    //                 throw new \Exception('Error al procesar la imagen');
+    //             }
+    //         }
+    
+    //         // Si el nombre del modelo ha cambiado, solo renombrar el directorio
+    //         if ($oldModeloName !== $newModeloName) {
+    //             $oldModeloDirectory = $baseDirectory . '/' . $oldModeloName;
+    //             $newModeloDirectory = $baseDirectory . '/' . $newModeloName;
+    
+    //             // Verificar si el directorio antiguo existe
+    //             if (Storage::disk('public')->exists($oldModeloDirectory)) {
+    //                 // Renombrar el directorio
+    //                 Storage::disk('public')->move($oldModeloDirectory, $newModeloDirectory);
+    //             }
+    //         }
+    
+    //         return response()->json([
+    //             'message' => 'Modelo actualizado correctamente',
+    //             'modelo' => $modelo->load('imagenes')
+    //         ]);
+    
+    //     } catch (\Illuminate\Validation\ValidationException $e) {
+    //         return response()->json([
+    //             'message' => 'Error de validación',
+    //             'errors' => $e->errors()
+    //         ], 422);
+    //     } catch (\Exception $e) {
+    //         Log::error('Error en editarModeloyImagen: ' . $e->getMessage());
+    //         return response()->json([
+    //             'message' => 'Error al actualizar el modelo',
+    //             'error' => $e->getMessage()
+    //         ], 500);
+    //     }
+    // }
+
     public function editarModeloyImagen(Request $request, $id)
     {
         try {
-            // Validar los datos
+            // Validar los datos básicos
             $request->validate([
                 'nombreModelo' => 'required|string|max:255',
                 'descripcion' => 'required|string|nullable',
-                'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:5120'
+                'nuevasImagenes' => 'nullable|array',
+                'nuevasImagenes.*' => 'image|mimes:jpeg,png,jpg|max:5120',
+                'imagenesReemplazadas' => 'nullable|array',
+                'imagenesReemplazadas.*' => 'image|mimes:jpeg,png,jpg|max:5120',
+                'idImagenesReemplazadas' => 'nullable|array',
+                'idImagenesReemplazadas.*' => 'required|integer'
             ]);
     
-            // Buscar el modelo
+            // Buscar el modelo y su producto asociado
             $modelo = Modelo::findOrFail($id);
             $producto = $modelo->producto;
     
-            // Crear el directorio base si no existe
+            // Establecer la estructura del directorio
             $baseDirectory = 'imagenes/productos/' . $producto->nombreProducto . '/modelos';
-            Storage::disk('public')->makeDirectory($baseDirectory);
-    
-            // Obtener el nombre del modelo actual y nuevo
             $oldModeloName = $modelo->nombreModelo;
             $newModeloName = $request->nombreModelo;
     
-            // Actualizar datos básicos
-            $modelo->nombreModelo = $newModeloName;
-            $modelo->save();
+            // Crear el directorio base si no existe
+            Storage::disk('public')->makeDirectory($baseDirectory);
     
-            // Procesar imagen si se proporciona una nueva
-            if ($request->hasFile('imagen')) {
-                $imagen = $request->file('imagen');
+            // Manejar imágenes reemplazadas
+            if ($request->hasFile('imagenesReemplazadas')) {
+                $imagenesReemplazadas = $request->file('imagenesReemplazadas');
+                $idsImagenes = $request->input('idImagenesReemplazadas', []);
     
-                // Generar nombre único para la imagen
-                $nombreImagen = time() . '_' . $imagen->getClientOriginalName();
-                $rutaImagen = $baseDirectory . '/' . $newModeloName . '/' . $nombreImagen;
-    
-                // Eliminar imagen anterior si existe
-                if ($modelo->imagenes()->exists()) {
-                    $imagenAnterior = $modelo->imagenes()->first();
-                    if ($imagenAnterior && Storage::disk('public')->exists($imagenAnterior->urlImagen)) {
-                        Storage::disk('public')->delete($imagenAnterior->urlImagen);
-                    }
-                    $imagenAnterior?->delete();
-                }
-    
-                // Guardar la nueva imagen
-                try {
-                    // Verificar si el directorio del nuevo modelo ya existe
-                    $newModeloDirectory = $baseDirectory . '/' . $newModeloName;
-                    if (!Storage::disk('public')->exists($newModeloDirectory)) {
-                        Storage::disk('public')->makeDirectory($newModeloDirectory);
+                foreach ($imagenesReemplazadas as $index => $nuevaImagen) {
+                    // Verificar que tenemos un ID válido para esta imagen
+                    if (!isset($idsImagenes[$index])) {
+                        continue;
                     }
     
-                    // Guardar la imagen en el directorio del nuevo modelo
-                    Storage::disk('public')->putFileAs(
-                        $newModeloDirectory,
-                        $imagen,
-                        $nombreImagen
-                    );
+                    $idImagen = $idsImagenes[$index];
+                    $imagenExistente = ImagenModelo::find($idImagen);
     
-                    // Crear o actualizar el registro de imagen
-                    ImagenModelo::create([
-                        'idModelo' => $modelo->idModelo,
-                        'urlImagen' => $rutaImagen,
-                        'descripcion' => 'Imagen del modelo ' . $newModeloName
-                    ]);
-                } catch (\Exception $e) {
-                    Log::error('Error al guardar la imagen: ' . $e->getMessage());
-                    throw new \Exception('Error al procesar la imagen');
+                    if ($imagenExistente) {
+                        // Eliminar la imagen antigua si existe
+                        $oldImagePath = $imagenExistente->urlImagen;
+                        if (Storage::disk('public')->exists($oldImagePath)) {
+                            Storage::disk('public')->delete($oldImagePath);
+                        }
+    
+                        // Crear el directorio para el nuevo nombre del modelo si no existe
+                        $modelDirectory = $baseDirectory . '/' . $newModeloName;
+                        Storage::disk('public')->makeDirectory($modelDirectory);
+    
+                        // Generar un nombre único para la nueva imagen
+                        $nombreImagen = time() . '_' . uniqid() . '_' . $nuevaImagen->getClientOriginalName();
+                        $rutaImagen = $modelDirectory . '/' . $nombreImagen;
+    
+                        // Guardar la nueva imagen en el directorio
+                        Storage::disk('public')->putFileAs(
+                            $modelDirectory,
+                            $nuevaImagen,
+                            $nombreImagen
+                        );
+    
+                        // Actualizar la ruta de la imagen en la base de datos
+                        $imagenExistente->update([
+                            'urlImagen' => $rutaImagen,
+                            'descripcion' => 'Imagen actualizada del modelo ' . $newModeloName
+                        ]);
+                    }
                 }
             }
     
-            // Si el nombre del modelo ha cambiado, solo renombrar el directorio
+            // Manejar nuevas imágenes adicionales
+            if ($request->hasFile('nuevasImagenes')) {
+                foreach ($request->file('nuevasImagenes') as $nuevaImagen) {
+                    // Crear el directorio para el nuevo nombre del modelo si no existe
+                    $modelDirectory = $baseDirectory . '/' . $newModeloName;
+                    Storage::disk('public')->makeDirectory($modelDirectory);
+    
+                    // Generar un nombre único para la nueva imagen
+                    $nombreImagen = time() . '_' . uniqid() . '_' . $nuevaImagen->getClientOriginalName();
+                    $rutaImagen = $modelDirectory . '/' . $nombreImagen;
+    
+                    // Guardar la nueva imagen en el directorio
+                    Storage::disk('public')->putFileAs(
+                        $modelDirectory,
+                        $nuevaImagen,
+                        $nombreImagen
+                    );
+    
+                    // Crear un nuevo registro de imagen en la base de datos
+                    ImagenModelo::create([
+                        'idmodelo' => $modelo->idModelo,
+                        'urlImagen' => $rutaImagen,
+                        'descripcion' => 'Nueva imagen del modelo ' . $newModeloName
+                    ]);
+                }
+            }
+    
+            // Manejar el cambio de nombre del modelo
             if ($oldModeloName !== $newModeloName) {
                 $oldModeloDirectory = $baseDirectory . '/' . $oldModeloName;
                 $newModeloDirectory = $baseDirectory . '/' . $newModeloName;
     
-                // Verificar si el directorio antiguo existe
                 if (Storage::disk('public')->exists($oldModeloDirectory)) {
-                    // Renombrar el directorio
-                    Storage::disk('public')->move($oldModeloDirectory, $newModeloDirectory);
+                    // Mover todas las imágenes restantes al nuevo directorio
+                    $files = Storage::disk('public')->files($oldModeloDirectory);
+                    foreach ($files as $file) {
+                        $fileName = basename($file);
+                        $newPath = $newModeloDirectory . '/' . $fileName;
+    
+                        if (Storage::disk('public')->exists($file)) {
+                            Storage::disk('public')->move($file, $newPath);
+                        }
+                    }
+    
+                    // Eliminar el directorio antiguo después de mover los archivos
+                    Storage::disk('public')->deleteDirectory($oldModeloDirectory);
+    
+                    // Actualizar las rutas de las imágenes en la base de datos
+                    $modelo->imagenes()
+                        ->whereRaw("urlImagen LIKE ?", ["%$oldModeloName%"])
+                        ->update([
+                            'urlImagen' => DB::raw("REPLACE(urlImagen, '$oldModeloName', '$newModeloName')")
+                        ]);
                 }
             }
+    
+            // Actualizar la información básica del modelo
+            $modelo->nombreModelo = $newModeloName;
+            $modelo->save();
     
             return response()->json([
                 'message' => 'Modelo actualizado correctamente',
                 'modelo' => $modelo->load('imagenes')
-            ]);
+            ], 200);
     
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
@@ -609,13 +760,14 @@ class SuperAdminController extends Controller
                 'errors' => $e->errors()
             ], 422);
         } catch (\Exception $e) {
-            Log::error('Error en editarModeloyImagen: ' . $e->getMessage());
+            \Log::error('Error en editarModeloyImagen: ' . $e->getMessage());
             return response()->json([
                 'message' => 'Error al actualizar el modelo',
                 'error' => $e->getMessage()
             ], 500);
         }
     }
+
     public function agregarCategorias(Request $request)
     {
         // Validar los datos de entrada
