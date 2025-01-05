@@ -19,7 +19,7 @@ use App\Http\Controllers\SuperAdminController;
 
         //PARA HOME
    
-        //Route::get('productos', [ClienteController::class, 'listarProductos']);
+       Route::get('/listarProductosCatalogo', [SuperAdminController::class, 'listarProductosCatalogo']);
 
        Route::get('/listarCategorias', [SuperAdminController::class, 'listarCategorias']);
 

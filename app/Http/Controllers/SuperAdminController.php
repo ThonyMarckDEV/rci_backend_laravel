@@ -525,6 +525,70 @@ class SuperAdminController extends Controller
         ], 200);
     }
     
+    public function listarProductosCatalogo(Request $request)
+    {
+        // Obtener los parámetros de la solicitud
+        $nombre = $request->input('nombreProducto', '');
+        $categoriaId = $request->input('categoria', '');
+        $perPage = $request->input('perPage', 10); // Número de elementos por página
+    
+        // Construir la consulta para obtener los productos con relaciones
+        $query = Producto::with([
+            'categoria:idCategoria,nombreCategoria', // Incluir solo los campos necesarios de la categoría
+            'modelos' => function($query) {
+                $query->with([
+                    'imagenes:idImagen,urlImagen,idModelo' // Incluir solo los campos necesarios de las imágenes
+                ]);
+            }
+        ]);
+    
+        // Filtrar solo productos con estado "activo"
+        $query->where('estado', 'activo');
+    
+        // Filtrar por nombre del producto
+        if ($nombre) {
+            $query->where('nombreProducto', 'like', '%' . $nombre . '%');
+        }
+    
+        // Filtrar por categoría
+        if ($categoriaId) {
+            $query->where('idCategoria', $categoriaId);
+        }
+    
+        // Paginar los resultados
+        $productos = $query->paginate($perPage);
+    
+        // Formatear la respuesta
+        $productosData = $productos->map(function($producto) {
+            return [
+                'idProducto' => $producto->idProducto,
+                'nombreProducto' => $producto->nombreProducto,
+                'descripcion' => $producto->descripcion ?: 'N/A',
+                'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
+                'modelos' => $producto->modelos->map(function($modelo) {
+                    return [
+                        'idModelo' => $modelo->idModelo,
+                        'nombreModelo' => $modelo->nombreModelo,
+                        'imagenes' => $modelo->imagenes->map(function($imagen) {
+                            return [
+                                'idImagen' => $imagen->idImagen,
+                                'urlImagen' => $imagen->urlImagen
+                            ];
+                        })
+                    ];
+                })
+            ];
+        });
+    
+        return response()->json([
+            'data' => $productosData,
+            'current_page' => $productos->currentPage(),
+            'last_page' => $productos->lastPage(),
+            'per_page' => $productos->perPage(),
+            'total' => $productos->total(),
+        ], 200);
+    }
+    
     public function editarModeloYImagen(Request $request, $idModelo)
     {
         $modelo = Modelo::findOrFail($idModelo);
@@ -803,6 +867,7 @@ class SuperAdminController extends Controller
         ]);
     }
 
+
     public function listarCategorias(Request $request)
     {
         // Obtener los parámetros de filtro y búsqueda
@@ -810,13 +875,17 @@ class SuperAdminController extends Controller
         $nombreCategoria = $request->input('nombreCategoria', '');
         $descripcion = $request->input('descripcion', '');
         $searchTerm = $request->input('searchTerm', '');
-    
+
+        // Parámetros de paginación
+        $page = $request->input('page', 1); // Página actual, por defecto 1
+        $perPage = $request->input('perPage', 10); // Elementos por página, por defecto 10
+
         // Construir la consulta
         $query = Categoria::query();
-    
+
         // Filtrar solo categorías con estado "activo"
         $query->where('estado', 'activo');
-    
+
         // Aplicar filtros adicionales
         if ($idCategoria) {
             $query->where('idCategoria', 'like', "%{$idCategoria}%");
@@ -830,30 +899,31 @@ class SuperAdminController extends Controller
         if ($searchTerm) {
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('idCategoria', 'like', "%{$searchTerm}%")
-                  ->orWhere('nombreCategoria', 'like', "%{$searchTerm}%")
-                  ->orWhere('descripcion', 'like', "%{$searchTerm}%");
+                ->orWhere('nombreCategoria', 'like', "%{$searchTerm}%")
+                ->orWhere('descripcion', 'like', "%{$searchTerm}%");
             });
         }
-    
+
         // Seleccionar solo los campos necesarios
         $query->select('idCategoria', 'nombreCategoria', 'descripcion', 'imagen');
-    
-        // Obtener todas las categorías sin paginación
-        $categorias = $query->get();
-    
+
+        // Paginar los resultados
+        $categorias = $query->paginate($perPage, ['*'], 'page', $page);
+
         // Formatear la respuesta
-        $response = $categorias->map(function ($categoria) {
-            return [
-                'idCategoria' => $categoria->idCategoria,
-                'nombreCategoria' => $categoria->nombreCategoria,
-                'descripcion' => $categoria->descripcion,
-                'imagen' => $categoria->imagen, // Asegúrate de que la URL de la imagen sea completa si es necesario
-            ];
-        });
-    
+        $response = [
+            'data' => $categorias->items(), // Datos de la página actual
+            'pagination' => [
+                'total' => $categorias->total(), // Total de registros
+                'perPage' => $categorias->perPage(), // Elementos por página
+                'currentPage' => $categorias->currentPage(), // Página actual
+                'lastPage' => $categorias->lastPage(), // Última página
+            ],
+        ];
+
         return response()->json($response);
     }
-    
+        
     public function cambiarEstadoCategoria($id, Request $request)
     {
         // Validar el estado recibido
