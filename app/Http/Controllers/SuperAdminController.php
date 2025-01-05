@@ -530,7 +530,7 @@ class SuperAdminController extends Controller
         // Obtener los parámetros de la solicitud
         $nombre = $request->input('nombreProducto', '');
         $categoriaId = $request->input('categoria', '');
-        $perPage = $request->input('perPage', 10); // Número de elementos por página
+        $perPage = $request->input('perPage', 4); // Número de elementos por página
     
         // Construir la consulta para obtener los productos con relaciones
         $query = Producto::with([
