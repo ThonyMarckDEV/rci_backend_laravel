@@ -18,7 +18,7 @@ use App\Http\Controllers\SuperAdminController;
         Route::post('/send-message', [AuthController::class, 'sendContactEmail']);
 
         //PARA HOME
-
+   
         //Route::get('productos', [ClienteController::class, 'listarProductos']);
 
        Route::get('/listarCategorias', [SuperAdminController::class, 'listarCategorias']);
@@ -55,15 +55,16 @@ use App\Http\Controllers\SuperAdminController;
 
         Route::put('/actualizarUsuario/{id}', [SuperAdminController::class, 'actualizarUsuario']);
         Route::delete('/eliminarUsuario/{id}', [SuperAdminController::class, 'eliminarUsuario']);
+        Route::get('/listarProductos', [SuperAdminController::class, 'listarProductos']);
+        Route::put('/actualizarProducto/{id}', [SuperAdminController::class, 'actualizarProducto']);
+        Route::put('/cambiarEstadoProducto/{id}',[SuperAdminController::class, 'cambiarEstadoProducto']);
 
-        Route::post('/actualizarProducto/{id}', [SuperAdminController::class, 'actualizarProducto']);
-        Route::delete('/eliminarProducto/{id}', [SuperAdminController::class, 'eliminarProducto']);
 
         Route::get('/categoriasproductos', [SuperAdminController::class, 'listarCategoriasproductos']);
         Route::post('/agregarProductos', [SuperAdminController::class, 'agregarProducto']);
         Route::get('/listarProductos/{id}', [SuperAdminController::class, 'listarProductos']);
         Route::post('/editarModeloyImagen/{id}', [SuperAdminController::class, 'editarModeloyImagen']);
-        
+        Route::delete('/eliminarImagenModelo/{id}', [SuperAdminController::class, 'eliminarImagenModelo']);
 
         Route::post('/categorias', [SuperAdminController::class, 'agregarCategorias']);
         Route::get('/obtenerCategorias', [SuperAdminController::class, 'obtenerCategorias']);
@@ -75,7 +76,7 @@ use App\Http\Controllers\SuperAdminController;
 
         Route::get('listarUsuarios', [SuperAdminController::class, 'listarUsuarios']);
 
-        Route::get('/listarProductos', [SuperAdminController::class, 'listarProductos']);
+
     });
 
 

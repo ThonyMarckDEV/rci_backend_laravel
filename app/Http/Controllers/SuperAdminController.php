@@ -411,6 +411,105 @@ class SuperAdminController extends Controller
             ], 500);
         }
     }
+    // public function listarProductos(Request $request)
+    // {
+    //     // Obtener los parámetros de la solicitud
+    //     $categoriaId = $request->input('categoria');
+    //     $texto = $request->input('texto');
+    //     $idProducto = $request->input('idProducto');
+    //     $perPage = $request->input('perPage', 10); // Número de elementos por página
+    
+    //     // Construir la consulta para obtener los productos con relaciones
+    //     $query = Producto::with([
+    //         'categoria:idCategoria,nombreCategoria,estado', // Incluir el campo 'estado' de la categoría
+    //         'modelos' => function($query) {
+    //             $query->with([
+    //                 'imagenes:idImagen,urlImagen,idModelo'
+    //             ]);
+    //         }
+    //     ]);
+    
+    //     // Filtrar por idProducto si el parámetro 'idProducto' existe
+    //     if ($idProducto) {
+    //         $query->where('idProducto', $idProducto);
+    //     }
+    
+    //     // Filtrar por categoría si el parámetro 'categoria' existe
+    //     if ($categoriaId) {
+    //         $query->where('idCategoria', $categoriaId);
+    //     }
+    
+    //     // Filtrar por texto en el nombre del producto si el parámetro 'texto' existe
+    //     if ($texto) {
+    //         $query->where('nombreProducto', 'like', '%' . $texto . '%');
+    //     }
+    
+    
+    //     // Paginar los resultados
+    //     $productos = $query->paginate($perPage);
+    
+    //     // Si se pasó un 'idProducto', se devuelve un solo producto
+    //     if ($idProducto) {
+    //         $producto = $productos->first();
+    
+    //         if ($producto) {
+    //             $productoData = [
+    //                 'idProducto' => $producto->idProducto,
+    //                 'nombreProducto' => $producto->nombreProducto,
+    //                 'descripcion' => $producto->descripcion,
+    //                 'estado' => $producto->estado,
+    //                 'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
+    //                 'modelos' => $producto->modelos->map(function($modelo) {
+    //                     return [
+    //                         'idModelo' => $modelo->idModelo,
+    //                         'nombreModelo' => $modelo->nombreModelo,
+    //                         'imagenes' => $modelo->imagenes->map(function($imagen) {
+    //                             return [
+    //                                 'idImagen' => $imagen->idImagen,
+    //                                 'urlImagen' => $imagen->urlImagen
+    //                             ];
+    //                         })
+    //                     ];
+    //                 })
+    //             ];
+    
+    //             return response()->json(['data' => $productoData], 200);
+    //         } else {
+    //             return response()->json(['message' => 'Producto no encontrado'], 404);
+    //         }
+    //     }
+    
+    //     // Si no se pasó un 'idProducto', devolver todos los productos paginados
+    //     $productosData = $productos->map(function($producto) {
+    //         return [
+    //             'idProducto' => $producto->idProducto,
+    //             'nombreProducto' => $producto->nombreProducto,
+    //             'descripcion' => $producto->descripcion ? : 'N/A',
+    //             'estado' => $producto->estado,
+    //             'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
+    //             'modelos' => $producto->modelos->map(function($modelo) {
+    //                 return [
+    //                     'idModelo' => $modelo->idModelo,
+    //                     'nombreModelo' => $modelo->nombreModelo,
+    //                     'imagenes' => $modelo->imagenes->map(function($imagen) {
+    //                         return [
+    //                             'idImagen' => $imagen->idImagen,
+    //                             'urlImagen' => $imagen->urlImagen
+    //                         ];
+    //                     })
+    //                 ];
+    //             })
+    //         ];
+    //     });
+    
+    //     return response()->json([
+    //         'data' => $productosData,
+    //         'current_page' => $productos->currentPage(),
+    //         'last_page' => $productos->lastPage(),
+    //         'per_page' => $productos->perPage(),
+    //         'total' => $productos->total(),
+    //     ], 200);
+    // }
 
     public function listarProductos(Request $request)
     {
@@ -419,7 +518,8 @@ class SuperAdminController extends Controller
         $texto = $request->input('texto');
         $idProducto = $request->input('idProducto');
         $perPage = $request->input('perPage', 10); // Número de elementos por página
-    
+        $filters = json_decode($request->input('filters', '{}'), true); // Filtros adicionales
+
         // Construir la consulta para obtener los productos con relaciones
         $query = Producto::with([
             'categoria:idCategoria,nombreCategoria,estado', // Incluir el campo 'estado' de la categoría
@@ -429,37 +529,42 @@ class SuperAdminController extends Controller
                 ]);
             }
         ]);
-    
-        // Filtrar por estado 'activo' en la tabla 'productos'
-        $query->where('estado', 'activo');
-    
-        // Filtrar por estado 'activo' en la tabla 'categorias'
-        $query->whereHas('categoria', function($q) {
-            $q->where('estado', 'activo');
-        });
-    
+
         // Filtrar por idProducto si el parámetro 'idProducto' existe
         if ($idProducto) {
             $query->where('idProducto', $idProducto);
         }
-    
+
         // Filtrar por categoría si el parámetro 'categoria' existe
         if ($categoriaId) {
             $query->where('idCategoria', $categoriaId);
         }
-    
+
         // Filtrar por texto en el nombre del producto si el parámetro 'texto' existe
         if ($texto) {
             $query->where('nombreProducto', 'like', '%' . $texto . '%');
         }
-    
+
+        // Aplicar filtros adicionales
+        if (!empty($filters)) {
+            if (isset($filters['nombreProducto']) && $filters['nombreProducto'] !== '') {
+                $query->where('nombreProducto', 'like', '%' . $filters['nombreProducto'] . '%');
+            }
+            if (isset($filters['descripcion']) && $filters['descripcion'] !== '') {
+                $query->where('descripcion', 'like', '%' . $filters['descripcion'] . '%');
+            }
+            if (isset($filters['estado']) && $filters['estado'] !== '') {
+                $query->where('estado', $filters['estado']);
+            }
+        }
+
         // Paginar los resultados
         $productos = $query->paginate($perPage);
-    
+
         // Si se pasó un 'idProducto', se devuelve un solo producto
         if ($idProducto) {
             $producto = $productos->first();
-    
+
             if ($producto) {
                 $productoData = [
                     'idProducto' => $producto->idProducto,
@@ -473,19 +578,20 @@ class SuperAdminController extends Controller
                             'nombreModelo' => $modelo->nombreModelo,
                             'imagenes' => $modelo->imagenes->map(function($imagen) {
                                 return [
+                                    'idImagen' => $imagen->idImagen,
                                     'urlImagen' => $imagen->urlImagen
                                 ];
                             })
                         ];
                     })
                 ];
-    
+
                 return response()->json(['data' => $productoData], 200);
             } else {
                 return response()->json(['message' => 'Producto no encontrado'], 404);
             }
         }
-    
+
         // Si no se pasó un 'idProducto', devolver todos los productos paginados
         $productosData = $productos->map(function($producto) {
             return [
@@ -500,6 +606,7 @@ class SuperAdminController extends Controller
                         'nombreModelo' => $modelo->nombreModelo,
                         'imagenes' => $modelo->imagenes->map(function($imagen) {
                             return [
+                                'idImagen' => $imagen->idImagen,
                                 'urlImagen' => $imagen->urlImagen
                             ];
                         })
@@ -507,7 +614,7 @@ class SuperAdminController extends Controller
                 })
             ];
         });
-    
+
         return response()->json([
             'data' => $productosData,
             'current_page' => $productos->currentPage(),
@@ -516,256 +623,138 @@ class SuperAdminController extends Controller
             'total' => $productos->total(),
         ], 200);
     }
-    // public function editarModeloyImagen(Request $request, $id)
-    // {
-    //     try {
-    //         // Validar los datos
-    //         $request->validate([
-    //             'nombreModelo' => 'required|string|max:255',
-    //             'descripcion' => 'required|string|nullable',
-    //             'imagen' => 'nullable|image|mimes:jpeg,png,jpg|max:5120'
-    //         ]);
     
-    //         // Buscar el modelo
-    //         $modelo = Modelo::findOrFail($id);
-    //         $producto = $modelo->producto;
-    
-    //         // Crear el directorio base si no existe
-    //         $baseDirectory = 'imagenes/productos/' . $producto->nombreProducto . '/modelos';
-    //         Storage::disk('public')->makeDirectory($baseDirectory);
-    
-    //         // Obtener el nombre del modelo actual y nuevo
-    //         $oldModeloName = $modelo->nombreModelo;
-    //         $newModeloName = $request->nombreModelo;
-    
-    //         // Actualizar datos básicos
-    //         $modelo->nombreModelo = $newModeloName;
-    //         $modelo->save();
-    
-    //         // Procesar imagen si se proporciona una nueva
-    //         if ($request->hasFile('imagen')) {
-    //             $imagen = $request->file('imagen');
-    
-    //             // Generar nombre único para la imagen
-    //             $nombreImagen = time() . '_' . $imagen->getClientOriginalName();
-    //             $rutaImagen = $baseDirectory . '/' . $newModeloName . '/' . $nombreImagen;
-    
-    //             // Eliminar imagen anterior si existe
-    //             if ($modelo->imagenes()->exists()) {
-    //                 $imagenAnterior = $modelo->imagenes()->first();
-    //                 if ($imagenAnterior && Storage::disk('public')->exists($imagenAnterior->urlImagen)) {
-    //                     Storage::disk('public')->delete($imagenAnterior->urlImagen);
-    //                 }
-    //                 $imagenAnterior?->delete();
-    //             }
-    
-    //             // Guardar la nueva imagen
-    //             try {
-    //                 // Verificar si el directorio del nuevo modelo ya existe
-    //                 $newModeloDirectory = $baseDirectory . '/' . $newModeloName;
-    //                 if (!Storage::disk('public')->exists($newModeloDirectory)) {
-    //                     Storage::disk('public')->makeDirectory($newModeloDirectory);
-    //                 }
-    
-    //                 // Guardar la imagen en el directorio del nuevo modelo
-    //                 Storage::disk('public')->putFileAs(
-    //                     $newModeloDirectory,
-    //                     $imagen,
-    //                     $nombreImagen
-    //                 );
-    
-    //                 // Crear o actualizar el registro de imagen
-    //                 ImagenModelo::create([
-    //                     'idModelo' => $modelo->idModelo,
-    //                     'urlImagen' => $rutaImagen,
-    //                     'descripcion' => 'Imagen del modelo ' . $newModeloName
-    //                 ]);
-    //             } catch (\Exception $e) {
-    //                 Log::error('Error al guardar la imagen: ' . $e->getMessage());
-    //                 throw new \Exception('Error al procesar la imagen');
-    //             }
-    //         }
-    
-    //         // Si el nombre del modelo ha cambiado, solo renombrar el directorio
-    //         if ($oldModeloName !== $newModeloName) {
-    //             $oldModeloDirectory = $baseDirectory . '/' . $oldModeloName;
-    //             $newModeloDirectory = $baseDirectory . '/' . $newModeloName;
-    
-    //             // Verificar si el directorio antiguo existe
-    //             if (Storage::disk('public')->exists($oldModeloDirectory)) {
-    //                 // Renombrar el directorio
-    //                 Storage::disk('public')->move($oldModeloDirectory, $newModeloDirectory);
-    //             }
-    //         }
-    
-    //         return response()->json([
-    //             'message' => 'Modelo actualizado correctamente',
-    //             'modelo' => $modelo->load('imagenes')
-    //         ]);
-    
-    //     } catch (\Illuminate\Validation\ValidationException $e) {
-    //         return response()->json([
-    //             'message' => 'Error de validación',
-    //             'errors' => $e->errors()
-    //         ], 422);
-    //     } catch (\Exception $e) {
-    //         Log::error('Error en editarModeloyImagen: ' . $e->getMessage());
-    //         return response()->json([
-    //             'message' => 'Error al actualizar el modelo',
-    //             'error' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
-
-    public function editarModeloyImagen(Request $request, $id)
+    public function editarModeloYImagen(Request $request, $idModelo)
     {
-        try {
-            // Validar los datos básicos
-            $request->validate([
-                'nombreModelo' => 'required|string|max:255',
-                'descripcion' => 'required|string|nullable',
-                'nuevasImagenes' => 'nullable|array',
-                'nuevasImagenes.*' => 'image|mimes:jpeg,png,jpg|max:5120',
-                'imagenesReemplazadas' => 'nullable|array',
-                'imagenesReemplazadas.*' => 'image|mimes:jpeg,png,jpg|max:5120',
-                'idImagenesReemplazadas' => 'nullable|array',
-                'idImagenesReemplazadas.*' => 'required|integer'
-            ]);
+        $modelo = Modelo::findOrFail($idModelo);
+        $modelo->update([
+            'nombreModelo' => $request->nombreModelo,
+            'descripcion' => $request->descripcion,
+        ]);
     
-            // Buscar el modelo y su producto asociado
-            $modelo = Modelo::findOrFail($id);
-            $producto = $modelo->producto;
+        // Procesar imágenes nuevas
+        if ($request->hasFile('nuevasImagenes')) {
+            foreach ($request->file('nuevasImagenes') as $imagen) {
+                $nombreProducto = $modelo->producto->nombreProducto;
+                $nombreModelo = $modelo->nombreModelo;
     
-            // Establecer la estructura del directorio
-            $baseDirectory = 'imagenes/productos/' . $producto->nombreProducto . '/modelos';
-            $oldModeloName = $modelo->nombreModelo;
-            $newModeloName = $request->nombreModelo;
+                $nombreArchivo = time() . '_' . $imagen->getClientOriginalName();
+                $ruta = "imagenes/productos/{$nombreProducto}/modelos/{$nombreModelo}/{$nombreArchivo}";
+                
+                // Verificar si existe una imagen con el mismo nombre en la base de datos
+                $imagenExistente = ImagenModelo::where('urlImagen', $ruta)->first();
     
-            // Crear el directorio base si no existe
-            Storage::disk('public')->makeDirectory($baseDirectory);
+                if ($imagenExistente) {
+                    Log::info("Imagen existente encontrada: {$imagenExistente->urlImagen}");
     
-            // Manejar imágenes reemplazadas
-            if ($request->hasFile('imagenesReemplazadas')) {
-                $imagenesReemplazadas = $request->file('imagenesReemplazadas');
-                $idsImagenes = $request->input('idImagenesReemplazadas', []);
-    
-                foreach ($imagenesReemplazadas as $index => $nuevaImagen) {
-                    // Verificar que tenemos un ID válido para esta imagen
-                    if (!isset($idsImagenes[$index])) {
-                        continue;
+                    // Intentar eliminar el archivo del almacenamiento
+                    if (Storage::disk('public')->exists($imagenExistente->urlImagen)) {
+                        Storage::disk('public')->delete($imagenExistente->urlImagen);
+                        Log::info("Imagen eliminada: {$imagenExistente->urlImagen}");
+                    } else {
+                        Log::warning("La imagen no existe en el almacenamiento: {$imagenExistente->urlImagen}");
                     }
-    
-                    $idImagen = $idsImagenes[$index];
-                    $imagenExistente = ImagenModelo::find($idImagen);
-    
-                    if ($imagenExistente) {
-                        // Eliminar la imagen antigua si existe
-                        $oldImagePath = $imagenExistente->urlImagen;
-                        if (Storage::disk('public')->exists($oldImagePath)) {
-                            Storage::disk('public')->delete($oldImagePath);
-                        }
-    
-                        // Crear el directorio para el nuevo nombre del modelo si no existe
-                        $modelDirectory = $baseDirectory . '/' . $newModeloName;
-                        Storage::disk('public')->makeDirectory($modelDirectory);
-    
-                        // Generar un nombre único para la nueva imagen
-                        $nombreImagen = time() . '_' . uniqid() . '_' . $nuevaImagen->getClientOriginalName();
-                        $rutaImagen = $modelDirectory . '/' . $nombreImagen;
-    
-                        // Guardar la nueva imagen en el directorio
-                        Storage::disk('public')->putFileAs(
-                            $modelDirectory,
-                            $nuevaImagen,
-                            $nombreImagen
-                        );
-    
-                        // Actualizar la ruta de la imagen en la base de datos
-                        $imagenExistente->update([
-                            'urlImagen' => $rutaImagen,
-                            'descripcion' => 'Imagen actualizada del modelo ' . $newModeloName
-                        ]);
-                    }
+                    
+                    // Eliminar el registro de la base de datos
+                    $imagenExistente->delete();
+                    Log::info("Registro eliminado de la base de datos: {$imagenExistente->idImagen}");
                 }
+    
+                // Guardar la nueva imagen
+                $imagen->storeAs("imagenes/productos/{$nombreProducto}/modelos/{$nombreModelo}", $nombreArchivo, 'public');
+                Log::info("Nueva imagen guardada en: {$ruta}");
+    
+                // Crear el registro en la base de datos
+                ImagenModelo::create([
+                    'urlImagen' => $ruta,
+                    'idModelo' => $modelo->idModelo,
+                    'descripcion' => 'Nueva imagen añadida',
+                ]);
             }
-    
-            // Manejar nuevas imágenes adicionales
-            if ($request->hasFile('nuevasImagenes')) {
-                foreach ($request->file('nuevasImagenes') as $nuevaImagen) {
-                    // Crear el directorio para el nuevo nombre del modelo si no existe
-                    $modelDirectory = $baseDirectory . '/' . $newModeloName;
-                    Storage::disk('public')->makeDirectory($modelDirectory);
-    
-                    // Generar un nombre único para la nueva imagen
-                    $nombreImagen = time() . '_' . uniqid() . '_' . $nuevaImagen->getClientOriginalName();
-                    $rutaImagen = $modelDirectory . '/' . $nombreImagen;
-    
-                    // Guardar la nueva imagen en el directorio
-                    Storage::disk('public')->putFileAs(
-                        $modelDirectory,
-                        $nuevaImagen,
-                        $nombreImagen
-                    );
-    
-                    // Crear un nuevo registro de imagen en la base de datos
-                    ImagenModelo::create([
-                        'idmodelo' => $modelo->idModelo,
-                        'urlImagen' => $rutaImagen,
-                        'descripcion' => 'Nueva imagen del modelo ' . $newModeloName
-                    ]);
-                }
-            }
-    
-            // Manejar el cambio de nombre del modelo
-            if ($oldModeloName !== $newModeloName) {
-                $oldModeloDirectory = $baseDirectory . '/' . $oldModeloName;
-                $newModeloDirectory = $baseDirectory . '/' . $newModeloName;
-    
-                if (Storage::disk('public')->exists($oldModeloDirectory)) {
-                    // Mover todas las imágenes restantes al nuevo directorio
-                    $files = Storage::disk('public')->files($oldModeloDirectory);
-                    foreach ($files as $file) {
-                        $fileName = basename($file);
-                        $newPath = $newModeloDirectory . '/' . $fileName;
-    
-                        if (Storage::disk('public')->exists($file)) {
-                            Storage::disk('public')->move($file, $newPath);
-                        }
-                    }
-    
-                    // Eliminar el directorio antiguo después de mover los archivos
-                    Storage::disk('public')->deleteDirectory($oldModeloDirectory);
-    
-                    // Actualizar las rutas de las imágenes en la base de datos
-                    $modelo->imagenes()
-                        ->whereRaw("urlImagen LIKE ?", ["%$oldModeloName%"])
-                        ->update([
-                            'urlImagen' => DB::raw("REPLACE(urlImagen, '$oldModeloName', '$newModeloName')")
-                        ]);
-                }
-            }
-    
-            // Actualizar la información básica del modelo
-            $modelo->nombreModelo = $newModeloName;
-            $modelo->save();
-    
-            return response()->json([
-                'message' => 'Modelo actualizado correctamente',
-                'modelo' => $modelo->load('imagenes')
-            ], 200);
-    
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'message' => 'Error de validación',
-                'errors' => $e->errors()
-            ], 422);
-        } catch (\Exception $e) {
-            \Log::error('Error en editarModeloyImagen: ' . $e->getMessage());
-            return response()->json([
-                'message' => 'Error al actualizar el modelo',
-                'error' => $e->getMessage()
-            ], 500);
         }
+    
+        // Reemplazo de imágenes existentes
+        if ($request->has('idImagenesReemplazadas')) {
+            foreach ($request->idImagenesReemplazadas as $index => $idImagen) {
+                $imagenModelo = ImagenModelo::findOrFail($idImagen);
+                $rutaAntigua = $imagenModelo->urlImagen;
+    
+                Log::info("Iniciando reemplazo de imagen: {$rutaAntigua}");
+    
+                if ($request->hasFile("imagenesReemplazadas.{$index}")) {
+                    $imagenReemplazada = $request->file("imagenesReemplazadas.{$index}");
+    
+                    // Eliminar la imagen anterior si existe
+                    if (Storage::disk('public')->exists($rutaAntigua)) {
+                        Storage::disk('public')->delete($rutaAntigua);
+                        Log::info("Imagen reemplazada eliminada: {$rutaAntigua}");
+                    } else {
+                        Log::warning("No se encontró la imagen a reemplazar: {$rutaAntigua}");
+                    }
+    
+                    $nombreProducto = $modelo->producto->nombreProducto;
+                    $nombreModelo = $modelo->nombreModelo;
+    
+                    $nombreArchivoNuevo = time() . '_' . $imagenReemplazada->getClientOriginalName();
+                    $rutaNueva = "imagenes/productos/{$nombreProducto}/modelos/{$nombreModelo}/{$nombreArchivoNuevo}";
+    
+                    // Guardar la nueva imagen
+                    $imagenReemplazada->storeAs("imagenes/productos/{$nombreProducto}/modelos/{$nombreModelo}", $nombreArchivoNuevo, 'public');
+                    Log::info("Nueva imagen guardada en: {$rutaNueva}");
+    
+                    // Actualizar la nueva ruta en la base de datos
+                    $imagenModelo->update([
+                        'urlImagen' => $rutaNueva,
+                    ]);
+                    Log::info("Ruta actualizada en la base de datos: {$rutaNueva}");
+                }
+            }
+        }
+    
+        return response()->json(['message' => 'Modelo e imágenes actualizados correctamente']);
+    }
+    
+    public function eliminarImagenModelo($idImagen)
+    {
+        // Buscar la imagen en la base de datos
+        $imagenModelo = ImagenModelo::findOrFail($idImagen);
+        $rutaImagen = $imagenModelo->urlImagen;
+    
+        // Eliminar archivo físico si existe (especificando el disco 'public')
+        if (Storage::disk('public')->exists($rutaImagen)) {
+            Storage::disk('public')->delete($rutaImagen);
+            Log::info("Imagen eliminada correctamente de la ruta: {$rutaImagen}");
+        } else {
+            Log::warning("La imagen no existe en el almacenamiento: {$rutaImagen}");
+        }
+    
+        // Eliminar el registro de la imagen de la base de datos
+        $imagenModelo->delete();
+        Log::info("Registro eliminado de la base de datos: {$imagenModelo->idImagen}");
+    
+        return response()->json(['message' => 'Imagen eliminada correctamente']);
+    }
+
+    public function actualizarProducto(Request $request, $idProducto)
+    {
+        $producto = Producto::find($idProducto);
+        
+        if (!$producto) {
+            return response()->json(['error' => 'Producto no encontrado'], 404);
+        }
+
+        $producto->nombreProducto = $request->nombreProducto;
+        $producto->descripcion = $request->descripcion;
+        $producto->save();
+
+        return response()->json(['message' => 'Producto actualizado correctamente']);
+    }
+
+    public function cambiarEstadoProducto(Request $request, $id) {
+        $producto = Producto::findOrFail($id);
+        $producto->estado = $request->estado;
+        $producto->save();
+        return response()->json(['message' => 'Estado actualizado']);
     }
 
     public function agregarCategorias(Request $request)
