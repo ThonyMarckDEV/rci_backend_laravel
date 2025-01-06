@@ -68,6 +68,8 @@ use App\Http\Controllers\SuperAdminController;
         // Cambiar estado de usuario (activo/inactivo)
         Route::patch('/listarUsuariosAdmin/{id}/cambiar-estado', [SuperAdminController::class, 'cambiarEstado']);
         Route::post('adminAgregar', [SuperAdminController::class, 'agregarUsuario']);
+        Route::post('/usuarios/{id}/cambiar-password',[SuperAdminController::class, 'cambiarPassword']);
+        Route::put('/password/{id}', [SuperAdminController::class, 'updatePasswordSuperAdmin']);
 
         Route::get('/listarProductos/{id}', [SuperAdminController::class, 'listarProductos']);
         Route::put('/actualizarUsuario/{id}', [SuperAdminController::class, 'actualizarUsuario']);

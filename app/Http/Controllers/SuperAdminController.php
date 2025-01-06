@@ -1362,7 +1362,97 @@ class SuperAdminController extends Controller
             ], 500);
         }
     }
+
+    // public function cambiarPassword(Request $request, $id)
+    // {
+    //     $request->validate([
+    //         'password' => 'required|min:6'
+    //     ]);
+
+    //     try {
+    //         $usuario = Usuario::findOrFail($id);
+    //         $usuario->password = bcrypt($request->password);
+    //         $usuario->save();
+
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Contraseña actualizada correctamente'
+    //         ]);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Error al actualizar la contraseña'
+    //         ], 500);
+    //     }
+    // }
+
+    public function cambiarPassword(Request $request, $id)
+    {
+        // Validar la entrada
+        $request->validate([
+            'password' => 'required|min:6', // Validar que la contraseña tenga al menos 6 caracteres
+        ]);
     
+        try {
+            // Obtener el ID del usuario autenticado
+            $usuarioId = auth()->id();
+            
+            // Obtener el usuario autenticado para obtener su nombre
+            $usuario = Usuario::find($usuarioId);
+            $nombreUsuario = $usuario->nombres . ' ' . $usuario->apellidos;
+    
+            // Obtener el usuario al que se le cambiará la contraseña
+            $usuarioCambiar = Usuario::findOrFail($id);
+    
+            // Actualizar la contraseña
+            $usuarioCambiar->password = bcrypt($request->password);
+            $usuarioCambiar->save();
+    
+            // Definir la acción para el log
+            $accion = "$nombreUsuario cambió la contraseña del usuario: {$usuarioCambiar->nombres} {$usuarioCambiar->apellidos}";
+    
+            // Registrar el log
+            $this->agregarLog($usuarioId, $accion);
+    
+            // Responder con éxito
+            return response()->json([
+                'success' => true,
+                'message' => 'Contraseña actualizada correctamente',
+            ]);
+        } catch (\Exception $e) {
+            // En caso de error, responder con mensaje de error
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al actualizar la contraseña',
+            ], 500);
+        }
+    }
+
+
+    public function updatePasswordSuperAdmin(Request $request, $id)
+    {
+        // Validar entrada
+        $validator = Validator::make($request->all(), [
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Error de validación', 'errors' => $validator->errors()], 422);
+        }
+
+        try {
+            $user = Usuario::findOrFail($id);
+
+            // Actualizar contraseña
+            $user->password = bcrypt($request->password);
+            $user->save();
+
+            return response()->json(['message' => 'Contraseña actualizada con éxito'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error al actualizar la contraseña', 'error' => $e->getMessage()], 500);
+        }
+    }
+        
 
     // Función para agregar un log directamente desde el backend
     public function agregarLog($usuarioId, $accion)
