@@ -80,6 +80,11 @@ class AuthController extends Controller
                 return response()->json(['error' => 'Usuario no encontrado'], 404);
             }
     
+            // Verificar si el usuario está inactivo
+            if ($usuario->estado === 'inactivo') {
+                return response()->json(['error' => 'Usuario inactivo. Por favor, contacte al administrador.'], 403);
+            }
+    
             // Intentar autenticar y generar el token JWT usando el campo 'correo'
             if (!$token = JWTAuth::attempt(['correo' => $credentials['correo'], 'password' => $credentials['password']])) {
                 return response()->json(['error' => 'Credenciales inválidas'], 401);
@@ -126,7 +131,7 @@ class AuthController extends Controller
             $usuario->update(['status' => 'loggedOn']);
     
             // Obtener el ID del usuario autenticado desde el token
-            $usuarioId = auth()->id(); // Obtiene el ID del usuario autenticado
+            $usuarioId = auth()->id();
     
             // Obtener el nombre completo del usuario autenticado
             $usuario = Usuario::find($usuarioId);
