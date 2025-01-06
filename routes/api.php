@@ -1,11 +1,9 @@
 <?php
 
-use App\Http\Controllers\AdminController;
 
-use App\Http\Controllers\ClienteController;
-use App\Http\Controllers\PaymentController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SuperAdminController;
 
 //RUTAS
@@ -48,6 +46,15 @@ use App\Http\Controllers\SuperAdminController;
         Route::put('/cambiarEstadoProducto/{id}',[SuperAdminController::class, 'cambiarEstadoProducto']);
     });
 
+
+    //================================================================================================
+    //RUTAS  DASHBOARD PROTEGIDAS par todos los roles
+
+    Route::middleware(['auth.jwt', 'checkRoleMW:superadmin'])->group(function () {
+
+        Route::get('/obtenerInfoAdmins', [DashboardController::class, 'obtenerInfoAdmins']);
+        Route::get('/logs', [DashboardController::class, 'getLogs']);
+    });
 
 //================================================================================================
     //RUTAS PROTEGIDAS A

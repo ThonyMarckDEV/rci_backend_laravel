@@ -4,24 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\ActividadUsuario;
 use App\Models\Usuario;
+use App\Models\Log as LogUser;
 use Illuminate\Http\Request;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Validator;
-use App\Models\Carrito;
-use App\Mail\VerificarCorreo;
-use Illuminate\Support\Str;
-use Exception;
-use App\Mail\CuentaVerificada;
-use Illuminate\Support\Facades\DB;
-use Google_Client;
-use Laravel\Socialite\Facades\Socialite;
+
 
 /**
 * @OA\Info(
@@ -68,47 +57,6 @@ class AuthController extends Controller
      *     )
      * )
      */
-    // public function login(Request $request)
-    // {
-    //     // Validar que el correo y la contraseña están presentes
-    //     $request->validate([
-    //         'correo' => 'required|email',
-    //         'password' => 'required|string|min:6',
-    //     ]);
-
-    //     // Obtener las credenciales de correo y contraseña
-    //     $credentials = [
-    //         'correo' => $request->input('correo'),
-    //         'password' => $request->input('password')
-    //     ];
-
-    //     try {
-    //         // Buscar el usuario por correo
-    //         $usuario = Usuario::where('correo', $credentials['correo'])->first();
-
-    //         // Verificar si el usuario existe
-    //         if (!$usuario) {
-    //             return response()->json(['error' => 'Usuario no encontrado'], 404);
-    //         }
-
-    //         // Verificar si el usuario ya está logueado
-    //         if ($usuario->status === 'loggedOn') {
-    //             return response()->json(['message' => 'Usuario ya logueado'], 409);
-    //         }
-
-    //         // Intentar autenticar y generar el token JWT usando el campo 'correo'
-    //         if (!$token = JWTAuth::attempt(['correo' => $credentials['correo'], 'password' => $credentials['password']])) {
-    //             return response()->json(['error' => 'Credenciales inválidas'], 401);
-    //         }
-
-    //         // Actualizar el estado del usuario a "loggedOn"
-    //         $usuario->update(['status' => 'loggedOn']);
-
-    //         return response()->json(compact('token'));
-    //     } catch (JWTException $e) {
-    //         return response()->json(['error' => 'No se pudo crear el token'], 500);
-    //     }
-    // }
     public function login(Request $request)
     {
         // Validar que el correo y la contraseña están presentes
@@ -158,7 +106,7 @@ class AuthController extends Controller
                     $actividad->update([
                         'jwt' => null,  // Invalida el token anterior
                     ]);
-                    
+    
                     // Crear un nuevo registro de actividad con el nuevo token y dispositivo
                     $actividad->update([
                         'last_activity' => now(),
@@ -176,6 +124,19 @@ class AuthController extends Controller
     
             // Actualizar el estado del usuario a "loggedOn"
             $usuario->update(['status' => 'loggedOn']);
+    
+            // Obtener el ID del usuario autenticado desde el token
+            $usuarioId = auth()->id(); // Obtiene el ID del usuario autenticado
+    
+            // Obtener el nombre completo del usuario autenticado
+            $usuario = Usuario::find($usuarioId);
+            $nombreUsuario = $usuario->nombres . ' ' . $usuario->apellidos;
+    
+            // Definir la acción y mensaje para el log
+            $accion = "$nombreUsuario inició sesión desde el dispositivo: $dispositivo";
+    
+            // Llamada a la función agregarLog para registrar el log
+            $this->agregarLog($usuarioId, $accion);
     
             return response()->json(compact('token'));
         } catch (JWTException $e) {
@@ -236,42 +197,33 @@ class AuthController extends Controller
         $request->validate([
             'idUsuario' => 'required|integer',
         ]);
-
+    
         $user = Usuario::where('idUsuario', $request->idUsuario)->first();
-
+    
         if ($user) {
             try {
+                // Actualizar el estado del usuario a "loggedOff"
                 $user->status = 'loggedOff';
                 $user->save();
-
+    
+                // Obtener el nombre completo del usuario
+                $nombreUsuario = $user->nombres . ' ' . $user->apellidos;
+    
+                // Definir la acción y mensaje para el log
+                $accion = "$nombreUsuario cerró sesión";
+    
+                // Llamada a la función agregarLog para registrar el log
+                $this->agregarLog($user->idUsuario, $accion);
+    
                 return response()->json(['success' => true, 'message' => 'Usuario deslogueado correctamente'], 200);
             } catch (JWTException $e) {
                 return response()->json(['error' => 'No se pudo desloguear al usuario'], 500);
             }
         }
-
+    
         return response()->json(['success' => false, 'message' => 'No se pudo encontrar el usuario'], 404);
     }
 
-
-    // public function refreshToken(Request $request)
-    // {
-    //     try {
-    //         $oldToken = JWTAuth::getToken();
-
-    //         Log::info('Refrescando token: Token recibido', ['token' => (string) $oldToken]);
-
-    //         $newToken = JWTAuth::refresh($oldToken);
-
-    //         Log::info('Token refrescado: Nuevo token', ['newToken' => $newToken]);
-
-    //         return response()->json(['accessToken' => $newToken], 200);
-    //     } catch (JWTException $e) {
-    //         Log::error('Error al refrescar el token', ['error' => $e->getMessage()]);
-
-    //         return response()->json(['error' => 'No se pudo refrescar el token'], 500);
-    //     }
-    // }
     public function refreshToken(Request $request)
     {
         try {
@@ -513,5 +465,26 @@ class AuthController extends Controller
          return response()->json(['success' => 'Mensaje enviado correctamente.']);
      }
 
+    // Función para agregar un log directamente desde el backend
+    public function agregarLog($usuarioId, $accion)
+    {
+        // Obtener el usuario por id
+        $usuario = Usuario::find($usuarioId);
+
+        if ($usuario) {
+            // Crear el log
+            $log = LogUser::create([
+                'idUsuario' => $usuario->idUsuario,
+                'nombreUsuario' => $usuario->nombres . ' ' . $usuario->apellidos,
+                'rol' => $usuario->rol,
+                'accion' => $accion,
+                'fecha' => now(),
+            ]);
+
+            return response()->json(['message' => 'Log agregado correctamente', 'log' => $log], 200);
+        }
+
+        return response()->json(['message' => 'Usuario no encontrado'], 404);
+    }
 
 }
