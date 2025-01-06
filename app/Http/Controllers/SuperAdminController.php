@@ -540,80 +540,6 @@ class SuperAdminController extends Controller
         ], 200);
     }
     
-    // public function listarProductosCatalogo(Request $request)
-    // {
-    //     // Validar parámetros de entrada
-    //     $request->validate([
-    //         'nombre' => 'nullable|string|max:255', // Filtro por nombre
-    //         'categoria' => 'nullable|string|max:255', // Filtro por categoría
-    //         'perPage' => 'nullable|integer|min:1|max:100', // Paginación
-    //     ]);
-    
-    //     // Obtener parámetros validados
-    //     $nombre = $request->input('nombre', '');  // Nombre del producto (si está presente)
-    //     $categoriaNombre = $request->input('categoria', '');  // Nombre de la categoría (si está presente)
-    //     $perPage = $request->input('perPage', 6);  // Cantidad de productos por página
-    
-    //     // Construir la consulta de productos con relaciones
-    //     $query = Producto::with([
-    //         'categoria:idCategoria,nombreCategoria',  // Relación con la categoría
-    //         'modelos' => function($query) {
-    //             $query->with([
-    //                 'imagenes:idImagen,urlImagen,idModelo'  // Relación con las imágenes
-    //             ]);
-    //         }
-    //     ]);
-    
-    //     // Filtrar solo productos activos
-    //     $query->where('estado', 'activo');
-    
-    //     // Filtrar por nombre del producto (coincidencia exacta)
-    //     if (!empty($nombre)) {
-    //         $query->where('nombreProducto', '=', $nombre);  // Coincidencia exacta con 'nombreProducto'
-    //     }
-    
-    //     // Filtrar por categoría (unión directa para evitar productos sin categoría)
-    //     if (!empty($categoriaNombre)) {
-    //         $query->whereHas('categoria', function($q) use ($categoriaNombre) {
-    //             $q->where('nombreCategoria', '=', $categoriaNombre);  // Coincidencia exacta con 'nombreCategoria'
-    //         });
-    //     }
-    
-    //     // Ejecutar paginación
-    //     $productos = $query->paginate($perPage);
-    
-    //     // Formatear la respuesta
-    //     $productosData = $productos->map(function($producto) {
-    //         return [
-    //             'idProducto' => $producto->idProducto,
-    //             'nombreProducto' => $producto->nombreProducto,
-    //             'descripcion' => $producto->descripcion ?: 'N/A',
-    //             'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
-    //             'modelos' => $producto->modelos->map(function($modelo) {
-    //                 return [
-    //                     'idModelo' => $modelo->idModelo,
-    //                     'nombreModelo' => $modelo->nombreModelo,
-    //                     'imagenes' => $modelo->imagenes->map(function($imagen) {
-    //                         return [
-    //                             'idImagen' => $imagen->idImagen,
-    //                             'urlImagen' => $imagen->urlImagen
-    //                         ];
-    //                     })
-    //                 ];
-    //             })
-    //         ];
-    //     });
-    
-    //     // Retornar JSON con productos filtrados
-    //     return response()->json([
-    //         'data' => $productosData,
-    //         'current_page' => $productos->currentPage(),
-    //         'last_page' => $productos->lastPage(),
-    //         'per_page' => $productos->perPage(),
-    //         'total' => $productos->total(),
-    //     ], 200);
-    // }
-
     public function listarProductosCatalogo(Request $request)
     {
         // Validar parámetros de entrada
@@ -644,11 +570,10 @@ class SuperAdminController extends Controller
                 $q->where('estado', 'activo');  // Filtrar categorías activas
             });
 
-        // Filtrar por nombre del producto (coincidencia exacta)
         if (!empty($nombre)) {
-            $query->where('nombreProducto', '=', $nombre);  // Coincidencia exacta con 'nombreProducto'
+            $query->where('nombreProducto', 'LIKE', "%{$nombre}%");  // Búsqueda parcial
         }
-
+            
         // Filtrar por categoría (unión directa para evitar productos sin categoría)
         if (!empty($categoriaNombre)) {
             $query->whereHas('categoria', function($q) use ($categoriaNombre) {
@@ -692,7 +617,6 @@ class SuperAdminController extends Controller
         ], 200);
     }
 
-    
     public function editarModeloYImagen(Request $request, $idModelo)
     {
         $modelo = Modelo::findOrFail($idModelo);
