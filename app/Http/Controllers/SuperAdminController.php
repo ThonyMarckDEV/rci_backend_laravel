@@ -418,7 +418,7 @@ class SuperAdminController extends Controller
         $categoriaId = $request->input('categoria');
         $texto = $request->input('texto');
         $idProducto = $request->input('idProducto');
-        $perPage = $request->input('perPage', 10); // Número de elementos por página
+        $perPage = $request->input('perPage', 6); // Número de elementos por página
         $filters = json_decode($request->input('filters', '{}'), true); // Filtros adicionales
 
         // Construir la consulta para obtener los productos con relaciones
@@ -525,37 +525,109 @@ class SuperAdminController extends Controller
         ], 200);
     }
     
+    // public function listarProductosCatalogo(Request $request)
+    // {
+    //     // Obtener los parámetros de la solicitud
+    //     $nombre = $request->input('nombreProducto', '');
+    //     $categoriaId = $request->input('categoria', '');
+    //     $perPage = $request->input('perPage', 6); // Número de elementos por página
+    
+    //     // Construir la consulta para obtener los productos con relaciones
+    //     $query = Producto::with([
+    //         'categoria:idCategoria,nombreCategoria', // Incluir solo los campos necesarios de la categoría
+    //         'modelos' => function($query) {
+    //             $query->with([
+    //                 'imagenes:idImagen,urlImagen,idModelo' // Incluir solo los campos necesarios de las imágenes
+    //             ]);
+    //         }
+    //     ]);
+    
+    //     // Filtrar solo productos con estado "activo"
+    //     $query->where('estado', 'activo');
+    
+    //     // Filtrar por nombre del producto
+    //     if ($nombre) {
+    //         $query->where('nombreProducto', 'like', '%' . $nombre . '%');
+    //     }
+    
+    //     // Filtrar por categoría
+    //     if ($categoriaId) {
+    //         $query->where('idCategoria', $categoriaId);
+    //     }
+    
+    //     // Paginar los resultados
+    //     $productos = $query->paginate($perPage);
+    
+    //     // Formatear la respuesta
+    //     $productosData = $productos->map(function($producto) {
+    //         return [
+    //             'idProducto' => $producto->idProducto,
+    //             'nombreProducto' => $producto->nombreProducto,
+    //             'descripcion' => $producto->descripcion ?: 'N/A',
+    //             'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
+    //             'modelos' => $producto->modelos->map(function($modelo) {
+    //                 return [
+    //                     'idModelo' => $modelo->idModelo,
+    //                     'nombreModelo' => $modelo->nombreModelo,
+    //                     'imagenes' => $modelo->imagenes->map(function($imagen) {
+    //                         return [
+    //                             'idImagen' => $imagen->idImagen,
+    //                             'urlImagen' => $imagen->urlImagen
+    //                         ];
+    //                     })
+    //                 ];
+    //             })
+    //         ];
+    //     });
+    
+    //     return response()->json([
+    //         'data' => $productosData,
+    //         'current_page' => $productos->currentPage(),
+    //         'last_page' => $productos->lastPage(),
+    //         'per_page' => $productos->perPage(),
+    //         'total' => $productos->total(),
+    //     ], 200);
+    // }
     public function listarProductosCatalogo(Request $request)
     {
-        // Obtener los parámetros de la solicitud
-        $nombre = $request->input('nombreProducto', '');
-        $categoriaId = $request->input('categoria', '');
-        $perPage = $request->input('perPage', 6); // Número de elementos por página
+        // Validar parámetros de entrada
+        $request->validate([
+            'nombre' => 'nullable|string|max:255', // Filtro por nombre
+            'categoria' => 'nullable|string|max:255', // Filtro por categoría
+            'perPage' => 'nullable|integer|min:1|max:100', // Paginación
+        ]);
     
-        // Construir la consulta para obtener los productos con relaciones
+        // Obtener parámetros validados
+        $nombre = $request->input('nombre', '');  // Nombre del producto (si está presente)
+        $categoriaNombre = $request->input('categoria', '');  // Nombre de la categoría (si está presente)
+        $perPage = $request->input('perPage', 6);  // Cantidad de productos por página
+    
+        // Construir la consulta de productos con relaciones
         $query = Producto::with([
-            'categoria:idCategoria,nombreCategoria', // Incluir solo los campos necesarios de la categoría
+            'categoria:idCategoria,nombreCategoria',  // Relación con la categoría
             'modelos' => function($query) {
                 $query->with([
-                    'imagenes:idImagen,urlImagen,idModelo' // Incluir solo los campos necesarios de las imágenes
+                    'imagenes:idImagen,urlImagen,idModelo'  // Relación con las imágenes
                 ]);
             }
         ]);
     
-        // Filtrar solo productos con estado "activo"
+        // Filtrar solo productos activos
         $query->where('estado', 'activo');
     
-        // Filtrar por nombre del producto
-        if ($nombre) {
-            $query->where('nombreProducto', 'like', '%' . $nombre . '%');
+        // Filtrar por nombre del producto (coincidencia exacta)
+        if (!empty($nombre)) {
+            $query->where('nombreProducto', '=', $nombre);  // Coincidencia exacta con 'nombreProducto'
         }
     
-        // Filtrar por categoría
-        if ($categoriaId) {
-            $query->where('idCategoria', $categoriaId);
+        // Filtrar por categoría (unión directa para evitar productos sin categoría)
+        if (!empty($categoriaNombre)) {
+            $query->whereHas('categoria', function($q) use ($categoriaNombre) {
+                $q->where('nombreCategoria', '=', $categoriaNombre);  // Coincidencia exacta con 'nombreCategoria'
+            });
         }
     
-        // Paginar los resultados
+        // Ejecutar paginación
         $productos = $query->paginate($perPage);
     
         // Formatear la respuesta
@@ -580,6 +652,7 @@ class SuperAdminController extends Controller
             ];
         });
     
+        // Retornar JSON con productos filtrados
         return response()->json([
             'data' => $productosData,
             'current_page' => $productos->currentPage(),
@@ -589,6 +662,7 @@ class SuperAdminController extends Controller
         ], 200);
     }
     
+
     public function editarModeloYImagen(Request $request, $idModelo)
     {
         $modelo = Modelo::findOrFail($idModelo);
@@ -923,6 +997,29 @@ class SuperAdminController extends Controller
 
         return response()->json($response);
     }
+
+    public function listarCategoriasFiltrador(Request $request)
+    {
+        // Construir la consulta
+        $query = Categoria::query();
+    
+        // Filtrar solo categorías con estado "activo"
+        $query->where('estado', 'activo');
+    
+        // Seleccionar solo los campos necesarios
+        $query->select('idCategoria', 'nombreCategoria');
+    
+        // Obtener los resultados, puedes paginarlos si es necesario
+        $categorias = $query->get(); // Si no deseas paginación, usa ->get()
+    
+        // Formatear la respuesta
+        $response = [
+            'data' => $categorias, // Datos de las categorías
+        ];
+    
+        return response()->json($response);
+    }
+    
         
     public function cambiarEstadoCategoria($id, Request $request)
     {
