@@ -334,83 +334,6 @@ class SuperAdminController extends Controller
         return response()->json($categorias);
     }
 
-    // public function agregarProducto(Request $request)
-    // {
-    //     $request->validate([
-    //         'nombreProducto' => 'required',
-    //         'descripcion' => 'nullable', // Descripción opcional
-    //         'estado' => 'required',
-    //         'idCategoria' => 'required|exists:categorias,idCategoria',
-    //         'modelos' => 'required|array', // Asegúrate de que se envíe un array de modelos
-    //         'modelos.*.nombreModelo' => 'required', // Nombre del modelo obligatorio
-    //         'modelos.*.imagen' => 'required|image', // Imagen del modelo obligatoria
-    //     ]);
-
-    //     try {
-    //         DB::beginTransaction();
-
-    //         // Crear el producto
-    //         $producto = Producto::create([
-    //             'nombreProducto' => $request->nombreProducto,
-    //             'descripcion' => $request->descripcion,
-    //             'estado' => $request->estado,
-    //             'idCategoria' => $request->idCategoria
-    //         ]);
-
-    //         // Crear los modelos
-    //         foreach ($request->modelos as $modeloData) {
-    //             $modelo = Modelo::create([
-    //                 'idProducto' => $producto->idProducto,
-    //                 'nombreModelo' => $modeloData['nombreModelo']
-    //             ]);
-
-    //             // Procesar la imagen de cada modelo
-    //             if (isset($modeloData['imagen'])) {
-    //                 $imagen = $modeloData['imagen'];
-    //                 $nombreProducto = $producto->nombreProducto;
-    //                 $nombreModelo = $modelo->nombreModelo;
-
-    //                 // Ruta para guardar la imagen
-    //                 $rutaImagen = 'imagenes/productos/' . $nombreProducto . '/modelos/' . $nombreModelo . '/' . $imagen->getClientOriginalName();
-
-    //                 // Guardar en el disco 'public'
-    //                 Storage::disk('public')->putFileAs(
-    //                     'imagenes/productos/' . $nombreProducto . '/modelos/' . $nombreModelo,
-    //                     $imagen,
-    //                     $imagen->getClientOriginalName()
-    //                 );
-
-    //                 // Guardar solo la ruta relativa
-    //                 $rutaImagenBD = str_replace('public/', '', $rutaImagen);
-
-    //                 // Crear la imagen del modelo
-    //                 ImagenModelo::create([
-    //                     'idModelo' => $modelo->idModelo,
-    //                     'urlImagen' => $rutaImagenBD,
-    //                     'descripcion' => 'Imagen del modelo ' . $nombreModelo
-    //                 ]);
-    //             }
-    //         }
-
-    //         DB::commit();
-
-    //         return response()->json([
-    //             'message' => 'Producto agregado correctamente',
-    //             'producto' => $producto
-    //         ], 201);
-
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-
-    //         // Imprime el error en los logs
-    //         Log::error('Error al agregar el producto: ' . $e->getMessage());
-
-    //         return response()->json([
-    //             'message' => 'Error al agregar el producto',
-    //             'error' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
 
     public function agregarProducto(Request $request)
     {
@@ -617,6 +540,80 @@ class SuperAdminController extends Controller
         ], 200);
     }
     
+    // public function listarProductosCatalogo(Request $request)
+    // {
+    //     // Validar parámetros de entrada
+    //     $request->validate([
+    //         'nombre' => 'nullable|string|max:255', // Filtro por nombre
+    //         'categoria' => 'nullable|string|max:255', // Filtro por categoría
+    //         'perPage' => 'nullable|integer|min:1|max:100', // Paginación
+    //     ]);
+    
+    //     // Obtener parámetros validados
+    //     $nombre = $request->input('nombre', '');  // Nombre del producto (si está presente)
+    //     $categoriaNombre = $request->input('categoria', '');  // Nombre de la categoría (si está presente)
+    //     $perPage = $request->input('perPage', 6);  // Cantidad de productos por página
+    
+    //     // Construir la consulta de productos con relaciones
+    //     $query = Producto::with([
+    //         'categoria:idCategoria,nombreCategoria',  // Relación con la categoría
+    //         'modelos' => function($query) {
+    //             $query->with([
+    //                 'imagenes:idImagen,urlImagen,idModelo'  // Relación con las imágenes
+    //             ]);
+    //         }
+    //     ]);
+    
+    //     // Filtrar solo productos activos
+    //     $query->where('estado', 'activo');
+    
+    //     // Filtrar por nombre del producto (coincidencia exacta)
+    //     if (!empty($nombre)) {
+    //         $query->where('nombreProducto', '=', $nombre);  // Coincidencia exacta con 'nombreProducto'
+    //     }
+    
+    //     // Filtrar por categoría (unión directa para evitar productos sin categoría)
+    //     if (!empty($categoriaNombre)) {
+    //         $query->whereHas('categoria', function($q) use ($categoriaNombre) {
+    //             $q->where('nombreCategoria', '=', $categoriaNombre);  // Coincidencia exacta con 'nombreCategoria'
+    //         });
+    //     }
+    
+    //     // Ejecutar paginación
+    //     $productos = $query->paginate($perPage);
+    
+    //     // Formatear la respuesta
+    //     $productosData = $productos->map(function($producto) {
+    //         return [
+    //             'idProducto' => $producto->idProducto,
+    //             'nombreProducto' => $producto->nombreProducto,
+    //             'descripcion' => $producto->descripcion ?: 'N/A',
+    //             'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
+    //             'modelos' => $producto->modelos->map(function($modelo) {
+    //                 return [
+    //                     'idModelo' => $modelo->idModelo,
+    //                     'nombreModelo' => $modelo->nombreModelo,
+    //                     'imagenes' => $modelo->imagenes->map(function($imagen) {
+    //                         return [
+    //                             'idImagen' => $imagen->idImagen,
+    //                             'urlImagen' => $imagen->urlImagen
+    //                         ];
+    //                     })
+    //                 ];
+    //             })
+    //         ];
+    //     });
+    
+    //     // Retornar JSON con productos filtrados
+    //     return response()->json([
+    //         'data' => $productosData,
+    //         'current_page' => $productos->currentPage(),
+    //         'last_page' => $productos->lastPage(),
+    //         'per_page' => $productos->perPage(),
+    //         'total' => $productos->total(),
+    //     ], 200);
+    // }
+
     public function listarProductosCatalogo(Request $request)
     {
         // Validar parámetros de entrada
@@ -625,40 +622,44 @@ class SuperAdminController extends Controller
             'categoria' => 'nullable|string|max:255', // Filtro por categoría
             'perPage' => 'nullable|integer|min:1|max:100', // Paginación
         ]);
-    
+
         // Obtener parámetros validados
         $nombre = $request->input('nombre', '');  // Nombre del producto (si está presente)
         $categoriaNombre = $request->input('categoria', '');  // Nombre de la categoría (si está presente)
         $perPage = $request->input('perPage', 6);  // Cantidad de productos por página
-    
+
         // Construir la consulta de productos con relaciones
         $query = Producto::with([
-            'categoria:idCategoria,nombreCategoria',  // Relación con la categoría
+            'categoria:idCategoria,nombreCategoria,estado',  // Relación con la categoría (incluir estado)
             'modelos' => function($query) {
                 $query->with([
                     'imagenes:idImagen,urlImagen,idModelo'  // Relación con las imágenes
                 ]);
             }
         ]);
-    
-        // Filtrar solo productos activos
-        $query->where('estado', 'activo');
-    
+
+        // Filtrar solo productos activos y de categorías activas
+        $query->where('estado', 'activo')
+            ->whereHas('categoria', function($q) {
+                $q->where('estado', 'activo');  // Filtrar categorías activas
+            });
+
         // Filtrar por nombre del producto (coincidencia exacta)
         if (!empty($nombre)) {
             $query->where('nombreProducto', '=', $nombre);  // Coincidencia exacta con 'nombreProducto'
         }
-    
+
         // Filtrar por categoría (unión directa para evitar productos sin categoría)
         if (!empty($categoriaNombre)) {
             $query->whereHas('categoria', function($q) use ($categoriaNombre) {
-                $q->where('nombreCategoria', '=', $categoriaNombre);  // Coincidencia exacta con 'nombreCategoria'
+                $q->where('nombreCategoria', '=', $categoriaNombre)
+                ->where('estado', 'activo');  // Coincidencia exacta con 'nombreCategoria' y estado activo
             });
         }
-    
+
         // Ejecutar paginación
         $productos = $query->paginate($perPage);
-    
+
         // Formatear la respuesta
         $productosData = $productos->map(function($producto) {
             return [
@@ -680,7 +681,7 @@ class SuperAdminController extends Controller
                 })
             ];
         });
-    
+
         // Retornar JSON con productos filtrados
         return response()->json([
             'data' => $productosData,
@@ -690,98 +691,8 @@ class SuperAdminController extends Controller
             'total' => $productos->total(),
         ], 200);
     }
-    
 
-    // public function editarModeloYImagen(Request $request, $idModelo)
-    // {
-    //     $modelo = Modelo::findOrFail($idModelo);
-    //     $modelo->update([
-    //         'nombreModelo' => $request->nombreModelo,
-    //         'descripcion' => $request->descripcion,
-    //     ]);
     
-    //     // Procesar imágenes nuevas
-    //     if ($request->hasFile('nuevasImagenes')) {
-    //         foreach ($request->file('nuevasImagenes') as $imagen) {
-    //             $nombreProducto = $modelo->producto->nombreProducto;
-    //             $nombreModelo = $modelo->nombreModelo;
-    
-    //             $nombreArchivo = time() . '_' . $imagen->getClientOriginalName();
-    //             $ruta = "imagenes/productos/{$nombreProducto}/modelos/{$nombreModelo}/{$nombreArchivo}";
-                
-    //             // Verificar si existe una imagen con el mismo nombre en la base de datos
-    //             $imagenExistente = ImagenModelo::where('urlImagen', $ruta)->first();
-    
-    //             if ($imagenExistente) {
-    //                 Log::info("Imagen existente encontrada: {$imagenExistente->urlImagen}");
-    
-    //                 // Intentar eliminar el archivo del almacenamiento
-    //                 if (Storage::disk('public')->exists($imagenExistente->urlImagen)) {
-    //                     Storage::disk('public')->delete($imagenExistente->urlImagen);
-    //                     Log::info("Imagen eliminada: {$imagenExistente->urlImagen}");
-    //                 } else {
-    //                     Log::warning("La imagen no existe en el almacenamiento: {$imagenExistente->urlImagen}");
-    //                 }
-                    
-    //                 // Eliminar el registro de la base de datos
-    //                 $imagenExistente->delete();
-    //                 Log::info("Registro eliminado de la base de datos: {$imagenExistente->idImagen}");
-    //             }
-    
-    //             // Guardar la nueva imagen
-    //             $imagen->storeAs("imagenes/productos/{$nombreProducto}/modelos/{$nombreModelo}", $nombreArchivo, 'public');
-    //             Log::info("Nueva imagen guardada en: {$ruta}");
-    
-    //             // Crear el registro en la base de datos
-    //             ImagenModelo::create([
-    //                 'urlImagen' => $ruta,
-    //                 'idModelo' => $modelo->idModelo,
-    //                 'descripcion' => 'Nueva imagen añadida',
-    //             ]);
-    //         }
-    //     }
-    
-    //     // Reemplazo de imágenes existentes
-    //     if ($request->has('idImagenesReemplazadas')) {
-    //         foreach ($request->idImagenesReemplazadas as $index => $idImagen) {
-    //             $imagenModelo = ImagenModelo::findOrFail($idImagen);
-    //             $rutaAntigua = $imagenModelo->urlImagen;
-    
-    //             Log::info("Iniciando reemplazo de imagen: {$rutaAntigua}");
-    
-    //             if ($request->hasFile("imagenesReemplazadas.{$index}")) {
-    //                 $imagenReemplazada = $request->file("imagenesReemplazadas.{$index}");
-    
-    //                 // Eliminar la imagen anterior si existe
-    //                 if (Storage::disk('public')->exists($rutaAntigua)) {
-    //                     Storage::disk('public')->delete($rutaAntigua);
-    //                     Log::info("Imagen reemplazada eliminada: {$rutaAntigua}");
-    //                 } else {
-    //                     Log::warning("No se encontró la imagen a reemplazar: {$rutaAntigua}");
-    //                 }
-    
-    //                 $nombreProducto = $modelo->producto->nombreProducto;
-    //                 $nombreModelo = $modelo->nombreModelo;
-    
-    //                 $nombreArchivoNuevo = time() . '_' . $imagenReemplazada->getClientOriginalName();
-    //                 $rutaNueva = "imagenes/productos/{$nombreProducto}/modelos/{$nombreModelo}/{$nombreArchivoNuevo}";
-    
-    //                 // Guardar la nueva imagen
-    //                 $imagenReemplazada->storeAs("imagenes/productos/{$nombreProducto}/modelos/{$nombreModelo}", $nombreArchivoNuevo, 'public');
-    //                 Log::info("Nueva imagen guardada en: {$rutaNueva}");
-    
-    //                 // Actualizar la nueva ruta en la base de datos
-    //                 $imagenModelo->update([
-    //                     'urlImagen' => $rutaNueva,
-    //                 ]);
-    //                 Log::info("Ruta actualizada en la base de datos: {$rutaNueva}");
-    //             }
-    //         }
-    //     }
-    
-    //     return response()->json(['message' => 'Modelo e imágenes actualizados correctamente']);
-    // }
-
     public function editarModeloYImagen(Request $request, $idModelo)
     {
         $modelo = Modelo::findOrFail($idModelo);
@@ -961,28 +872,6 @@ class SuperAdminController extends Controller
     }
 
 
-    
-    // public function eliminarImagenModelo($idImagen)
-    // {
-    //     // Buscar la imagen en la base de datos
-    //     $imagenModelo = ImagenModelo::findOrFail($idImagen);
-    //     $rutaImagen = $imagenModelo->urlImagen;
-    
-    //     // Eliminar archivo físico si existe (especificando el disco 'public')
-    //     if (Storage::disk('public')->exists($rutaImagen)) {
-    //         Storage::disk('public')->delete($rutaImagen);
-    //         Log::info("Imagen eliminada correctamente de la ruta: {$rutaImagen}");
-    //     } else {
-    //         Log::warning("La imagen no existe en el almacenamiento: {$rutaImagen}");
-    //     }
-    
-    //     // Eliminar el registro de la imagen de la base de datos
-    //     $imagenModelo->delete();
-    //     Log::info("Registro eliminado de la base de datos: {$imagenModelo->idImagen}");
-    
-    //     return response()->json(['message' => 'Imagen eliminada correctamente']);
-    // }
-
     public function eliminarImagenModelo($idImagen)
     {
         // Buscar la imagen en la base de datos
@@ -1017,20 +906,6 @@ class SuperAdminController extends Controller
         return response()->json(['message' => 'Imagen eliminada correctamente']);
     }
     
-    // public function actualizarProducto(Request $request, $idProducto)
-    // {
-    //     $producto = Producto::find($idProducto);
-        
-    //     if (!$producto) {
-    //         return response()->json(['error' => 'Producto no encontrado'], 404);
-    //     }
-
-    //     $producto->nombreProducto = $request->nombreProducto;
-    //     $producto->descripcion = $request->descripcion;
-    //     $producto->save();
-
-    //     return response()->json(['message' => 'Producto actualizado correctamente']);
-    // }
 
     public function actualizarProducto(Request $request, $idProducto)
     {
@@ -1439,28 +1314,6 @@ class SuperAdminController extends Controller
         }
     }
 
-    // public function cambiarPassword(Request $request, $id)
-    // {
-    //     $request->validate([
-    //         'password' => 'required|min:6'
-    //     ]);
-
-    //     try {
-    //         $usuario = Usuario::findOrFail($id);
-    //         $usuario->password = bcrypt($request->password);
-    //         $usuario->save();
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'Contraseña actualizada correctamente'
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Error al actualizar la contraseña'
-    //         ], 500);
-    //     }
-    // }
 
     public function cambiarPassword(Request $request, $id)
     {
