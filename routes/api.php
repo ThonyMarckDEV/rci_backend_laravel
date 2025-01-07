@@ -44,6 +44,8 @@ use App\Http\Controllers\SuperAdminController;
         Route::get('/listarProductos', [SuperAdminController::class, 'listarProductos']);
         Route::put('/actualizarProducto/{id}', [SuperAdminController::class, 'actualizarProducto']);
         Route::put('/cambiarEstadoProducto/{id}',[SuperAdminController::class, 'cambiarEstadoProducto']);
+        Route::post('/agregarModelo', [SuperAdminController::class, 'agregarModelo']);
+        Route::delete('/EliminarModelo/{idModelo}', [SuperAdminController::class, 'EliminarModelo']);
     });
 
 
@@ -74,8 +76,7 @@ use App\Http\Controllers\SuperAdminController;
         Route::get('/listarProductos/{id}', [SuperAdminController::class, 'listarProductos']);
         Route::put('/actualizarUsuario/{id}', [SuperAdminController::class, 'actualizarUsuario']);
         Route::delete('/eliminarUsuario/{id}', [SuperAdminController::class, 'eliminarUsuario']);
-        Route::post('/agregarModelo', [SuperAdminController::class, 'agregarModelo']);
-        Route::delete('/EliminarModelo/{idModelo}', [SuperAdminController::class, 'EliminarModelo']);
+       
 
 
         Route::post('/categorias', [SuperAdminController::class, 'agregarCategorias']);
