@@ -16,7 +16,7 @@
 
         /* Contenedor principal con imagen de fondo */
         .email-container {
-            background-image: url('https://talararci.thonymarckdev.online/storage/imagenes/logo/fondoblanco.jpg');
+            background-image: url('https://talararci.thonymarckdev.online/storage/imagenes/logo/blanco.jpg');
             background-size: cover; /* Ajusta la imagen al tamaño del contenedor */
             background-position: center; /* Centra la imagen */
             border-radius: 8px;
@@ -100,7 +100,7 @@
         <div class="content">
             <div class="field">
                 <span class="label">Nombre:</span>
-                <div class='value' style='color: #000;'>{{ $name }}</div> <!-- Negro explícito -->
+                <div class='value'>{{ $name }}</div> <!-- Negro explícito -->
             </div>
 
             <div class="field">
@@ -110,7 +110,7 @@
 
             <div class="field">
                 <span class="label">Mensaje:</span>
-                <div class='value' message-content style='color: #000;'>{{ $messageContent }}</div> <!-- Negro explícito -->
+                <div class='value'>{{ $messageContent }}</div> <!-- Negro explícito -->
             </div>
         </div>
 
