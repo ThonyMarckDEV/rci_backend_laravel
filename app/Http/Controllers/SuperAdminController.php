@@ -3,32 +3,76 @@
 namespace App\Http\Controllers;
 
 use App\Models\ImagenModelo;
-use App\Models\Talla;
 use App\Models\Usuario;
 use App\Models\Categoria;
 use App\Models\Producto;
 use App\Models\Log as LogUser;
 use Illuminate\Http\Request;
-use App\Mail\NotificacionPagoCompletado;
-use App\Mail\NotificacionPedidoEliminado;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
-use FPDF;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Response;
-use App\Models\Facturacion;
 use App\Models\Modelo;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Str;
-
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class SuperAdminController extends Controller
 {
-    // FUNCION PARA REGISTRAR UN ADMIN
+    /**
+     * @OA\Post(
+     *     path="/api/adminAgregar",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Agregar un nuevo usuario administrador",
+     *     description="Permite a un superadministrador agregar un nuevo usuario con rol de administrador.",
+     *     operationId="agregarUsuario",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos del nuevo usuario administrador",
+     *         @OA\JsonContent(
+     *             required={"nombres","apellidos","correo","password"},
+     *             @OA\Property(property="nombres", type="string", example="Juan"),
+     *             @OA\Property(property="apellidos", type="string", example="Pérez"),
+     *             @OA\Property(property="correo", type="string", format="email", example="juan.perez@dominio.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="contraseña123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Usuario agregado exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Usuario agregado exitosamente"),
+     *             @OA\Property(
+     *                 property="user",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="rol", type="string", example="admin"),
+     *                 @OA\Property(property="nombres", type="string", example="Juan"),
+     *                 @OA\Property(property="apellidos", type="string", example="Pérez"),
+     *                 @OA\Property(property="correo", type="string", format="email", example="juan.perez@dominio.com"),
+     *                 @OA\Property(property="fecha_creado", type="string", format="date-time", example="2023-10-01T12:00:00Z"),
+     *                 @OA\Property(property="status", type="string", example="loggedOff"),
+     *                 @OA\Property(property="estado", type="string", example="activo")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(property="errors", type="object", example={"correo": {"El campo correo es requerido."}})
+     *         )
+     *     )
+     * )
+     * @OA\SecurityScheme(
+    *     securityScheme="bearerAuth",
+    *     type="http",
+    *     scheme="bearer",
+    *     bearerFormat="JWT",
+    *     description="Usar un token JWT en el encabezado Authorization como Bearer <token>"
+    * )
+     */
     public function agregarUsuario(Request $request)
     {
         // Validar los datos de entrada
@@ -86,7 +130,92 @@ class SuperAdminController extends Controller
     }
         
 
-     // Editar usuario
+        /**
+     * @OA\Put(
+     *     path="/api/listarUsuariosAdmin/{id}",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Editar un usuario existente",
+     *     description="Permite a un usuario autorizado editar la información de un usuario existente, incluyendo nombres, apellidos, correo, contraseña y rol.",
+     *     operationId="editarUsuario",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del usuario que se desea editar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos del usuario que se desean actualizar",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="nombres", type="string", example="Juan"),
+     *             @OA\Property(property="apellidos", type="string", example="Pérez"),
+     *             @OA\Property(property="email", type="string", format="email", example="juan.perez@dominio.com"),
+     *             @OA\Property(property="password", type="string", format="password", example="nuevaContraseña123"),
+     *             @OA\Property(property="role", type="string", example="admin")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Usuario actualizado exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Usuario actualizado exitosamente"),
+     *             @OA\Property(
+     *                 property="user",
+     *                 type="object",
+     *                 @OA\Property(property="id", type="integer", example=1),
+     *                 @OA\Property(property="nombres", type="string", example="Juan"),
+     *                 @OA\Property(property="apellidos", type="string", example="Pérez"),
+     *                 @OA\Property(property="correo", type="string", format="email", example="juan.perez@dominio.com"),
+     *                 @OA\Property(property="rol", type="string", example="admin"),
+     *                 @OA\Property(property="fecha_creado", type="string", format="date-time", example="2023-10-01T12:00:00Z"),
+     *                 @OA\Property(property="status", type="string", example="loggedOff"),
+     *                 @OA\Property(property="estado", type="string", example="activo")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Usuario no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Usuario no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 example={
+     *                     "correo": {"El campo correo es requerido."},
+     *                     "password": {"El campo password debe tener al menos 6 caracteres."}
+     *                 }
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Error interno del servidor")
+     *         )
+     *     )
+     * )
+     */
      public function editarUsuario(Request $request, $id)
      {
          Log::info('Iniciando actualización de usuario', ['usuario_id' => $id, 'data' => $request->all()]);
@@ -204,7 +333,111 @@ class SuperAdminController extends Controller
          ]);
      }
      
-
+    /**
+     * @OA\Get(
+     *     path="/api/listarUsuarios",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Listar usuarios administradores",
+     *     description="Permite a un superadministrador listar todos los usuarios con rol de administrador, con opciones de paginación, búsqueda y filtrado.",
+     *     operationId="listarUsuarios",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="per_page",
+     *         in="query",
+     *         description="Número de elementos por página (por defecto 10)",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=10)
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Número de página (por defecto 1)",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="search",
+     *         in="query",
+     *         description="Término de búsqueda general (busca en nombres, apellidos, correo, rol y estado)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Juan")
+     *     ),
+     *     @OA\Parameter(
+     *         name="nombres",
+     *         in="query",
+     *         description="Filtrar por nombres",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Juan")
+     *     ),
+     *     @OA\Parameter(
+     *         name="apellidos",
+     *         in="query",
+     *         description="Filtrar por apellidos",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Pérez")
+     *     ),
+     *     @OA\Parameter(
+     *         name="correo",
+     *         in="query",
+     *         description="Filtrar por correo electrónico",
+     *         required=false,
+     *         @OA\Schema(type="string", format="email", example="juan.perez@dominio.com")
+     *     ),
+     *     @OA\Parameter(
+     *         name="rol",
+     *         in="query",
+     *         description="Filtrar por rol",
+     *         required=false,
+     *         @OA\Schema(type="string", example="admin")
+     *     ),
+     *     @OA\Parameter(
+     *         name="estado",
+     *         in="query",
+     *         description="Filtrar por estado",
+     *         required=false,
+     *         @OA\Schema(type="string", example="activo")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de usuarios obtenida exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(
+     *                 property="usuarios",
+     *                 type="array",
+     *                 @OA\Items(
+     *                     type="object",
+     *                     @OA\Property(property="idUsuario", type="integer", example=1),
+     *                     @OA\Property(property="nombres", type="string", example="Juan"),
+     *                     @OA\Property(property="apellidos", type="string", example="Pérez"),
+     *                     @OA\Property(property="correo", type="string", format="email", example="juan.perez@dominio.com"),
+     *                     @OA\Property(property="rol", type="string", example="admin"),
+     *                     @OA\Property(property="estado", type="string", example="activo")
+     *                 )
+     *             ),
+     *             @OA\Property(
+     *                 property="pagination",
+     *                 type="object",
+     *                 @OA\Property(property="total", type="integer", example=100),
+     *                 @OA\Property(property="per_page", type="integer", example=10),
+     *                 @OA\Property(property="current_page", type="integer", example=1),
+     *                 @OA\Property(property="last_page", type="integer", example=10),
+     *                 @OA\Property(property="from", type="integer", example=1),
+     *                 @OA\Property(property="to", type="integer", example=10)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Error al obtener los usuarios"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
      public function listarUsuarios(Request $request)
      {
          try {
@@ -260,7 +493,63 @@ class SuperAdminController extends Controller
          }
      }
  
-    // FUNCION PARA CAMBIAR EL ESTADO DE UN USUARIO
+        /**
+     * @OA\Put(
+     *     path="/api/listarUsuariosAdmin/{id}/cambiar-estado",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Cambiar el estado de un usuario",
+     *     description="Permite a un superadministrador cambiar el estado de un usuario entre 'activo' e 'inactivo'. Además, registra la acción en el log del sistema.",
+     *     operationId="cambiarEstado",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del usuario cuyo estado se desea cambiar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Estado actualizado exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Estado actualizado exitosamente"),
+     *             @OA\Property(
+     *                 property="user",
+     *                 type="object",
+     *                 @OA\Property(property="idUsuario", type="integer", example=1),
+     *                 @OA\Property(property="nombres", type="string", example="Juan"),
+     *                 @OA\Property(property="apellidos", type="string", example="Pérez"),
+     *                 @OA\Property(property="correo", type="string", format="email", example="juan.perez@dominio.com"),
+     *                 @OA\Property(property="rol", type="string", example="admin"),
+     *                 @OA\Property(property="estado", type="string", example="inactivo")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Usuario no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Usuario no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Error interno del servidor")
+     *         )
+     *     )
+     * )
+     */
     public function cambiarEstado($id)
     {
         // Buscar el usuario por ID
@@ -304,29 +593,43 @@ class SuperAdminController extends Controller
         ]);
     }
 
-    // Listar todos los productos con el nombre de la categoría y URL completa de la imagen
-    public function obtenerProductos()
-    {
-        $productos = Producto::with('categoria:idCategoria,nombreCategoria')->get();
-
-        // Mapeo para agregar el nombre de la categoría y la URL completa de la imagen
-        $productos = $productos->map(function ($producto) {
-            return [
-                'idProducto' => $producto->idProducto,
-                'nombreProducto' => $producto->nombreProducto,
-                'descripcion' => $producto->descripcion,
-                'precio' => $producto->precio,
-                'stock' => $producto->stock,
-                'imagen' => $producto->imagen ? url("storage/{$producto->imagen}") : null, // URL completa de la imagen
-                'idCategoria' => $producto->idCategoria,
-                'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : null,
-            ];
-        });
-
-        return response()->json(['success' => true, 'data' => $productos], 200);
-    }
-
-
+    /**
+     * @OA\Get(
+     *     path="/api/categoriasproductos",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Listar categorías de productos activas",
+     *     description="Permite a un superadministrador obtener una lista de todas las categorías de productos con estado 'activo'.",
+     *     operationId="listarCategoriasProductos",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de categorías obtenida exitosamente",
+     *         @OA\JsonContent(
+     *             type="array",
+     *             @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="idCategoria", type="integer", example=1),
+     *                 @OA\Property(property="nombreCategoria", type="string", example="Electrónica"),
+     *                 @OA\Property(property="estado", type="string", example="activo")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Error interno del servidor")
+     *         )
+     *     )
+     * )
+     */
     public function listarCategoriasProductos()
     {
         // Filtrar categorías con estado "activo"
@@ -335,6 +638,86 @@ class SuperAdminController extends Controller
     }
 
 
+    /**
+     * @OA\Post(
+     *     path="/api/agregarProducto",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Agregar un nuevo producto con modelos e imágenes",
+     *     description="Permite a un superadministrador agregar un nuevo producto, incluyendo sus modelos e imágenes asociadas. Se validan los datos de entrada y se registra la acción en el log del sistema.",
+     *     operationId="agregarProducto",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos del producto y sus modelos",
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"nombreProducto", "estado", "idCategoria", "modelos"},
+     *                 @OA\Property(property="nombreProducto", type="string", example="Producto Ejemplo"),
+     *                 @OA\Property(property="descripcion", type="string", nullable=true, example="Descripción del producto"),
+     *                 @OA\Property(property="estado", type="string", example="activo"),
+     *                 @OA\Property(property="idCategoria", type="integer", example=1),
+     *                 @OA\Property(
+     *                     property="modelos",
+     *                     type="array",
+     *                     @OA\Items(
+     *                         type="object",
+     *                         required={"nombreModelo", "imagen"},
+     *                         @OA\Property(property="nombreModelo", type="string", example="Modelo Ejemplo"),
+     *                         @OA\Property(property="imagen", type="string", format="binary", description="Imagen del modelo (formato: jpg, png, etc.)")
+     *                     )
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Producto agregado exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Producto agregado correctamente"),
+     *             @OA\Property(
+     *                 property="producto",
+     *                 type="object",
+     *                 @OA\Property(property="idProducto", type="integer", example=1),
+     *                 @OA\Property(property="nombreProducto", type="string", example="Producto Ejemplo"),
+     *                 @OA\Property(property="descripcion", type="string", example="Descripción del producto"),
+     *                 @OA\Property(property="estado", type="string", example="activo"),
+     *                 @OA\Property(property="idCategoria", type="integer", example=1)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 example={
+     *                     "nombreProducto": {"El campo nombreProducto es obligatorio."},
+     *                     "modelos.0.nombreModelo": {"El campo nombreModelo es obligatorio."}
+     *                 }
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al agregar el producto"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function agregarProducto(Request $request)
     {
         $request->validate([
@@ -362,7 +745,8 @@ class SuperAdminController extends Controller
             foreach ($request->modelos as $modeloData) {
                 $modelo = Modelo::create([
                     'idProducto' => $producto->idProducto,
-                    'nombreModelo' => $modeloData['nombreModelo']
+                    'nombreModelo' => $modeloData['nombreModelo'],
+                    'urlModelo' => null
                 ]);
 
                 // Procesar la imagen de cada modelo
@@ -426,7 +810,8 @@ class SuperAdminController extends Controller
         }
     }
 
- 
+
+
     public function listarProductos(Request $request)
     {
         // Obtener los parámetros de la solicitud
@@ -539,7 +924,91 @@ class SuperAdminController extends Controller
             'total' => $productos->total(),
         ], 200);
     }
-    
+
+
+        /**
+     * @OA\Get(
+     *     path="/api/listarProductosCatalogo",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Listar productos del catálogo con filtros y paginación",
+     *     description="Permite a un superadministrador listar productos del catálogo con opciones de filtrado por nombre, categoría y paginación. Solo se incluyen productos y categorías con estado 'activo'.",
+     *     operationId="listarProductosCatalogo",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="nombre",
+     *         in="query",
+     *         description="Filtrar productos por nombre (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Producto Ejemplo")
+     *     ),
+     *     @OA\Parameter(
+     *         name="categoria",
+     *         in="query",
+     *         description="Filtrar productos por nombre de categoría (coincidencia exacta)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Electrónica")
+     *     ),
+     *     @OA\Parameter(
+     *         name="perPage",
+     *         in="query",
+     *         description="Número de productos por página (por defecto 6, máximo 100)",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=6)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de productos obtenida exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="data", type="array", @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="idProducto", type="integer", example=1),
+     *                 @OA\Property(property="nombreProducto", type="string", example="Producto Ejemplo"),
+     *                 @OA\Property(property="descripcion", type="string", example="Descripción del producto"),
+     *                 @OA\Property(property="nombreCategoria", type="string", example="Electrónica"),
+     *                 @OA\Property(property="modelos", type="array", @OA\Items(
+     *                     type="object",
+     *                     @OA\Property(property="idModelo", type="integer", example=1),
+     *                     @OA\Property(property="nombreModelo", type="string", example="Modelo Ejemplo"),
+     *                     @OA\Property(property="imagenes", type="array", @OA\Items(
+     *                         type="object",
+     *                         @OA\Property(property="idImagen", type="integer", example=1),
+     *                         @OA\Property(property="urlImagen", type="string", example="http://example.com/imagen.jpg")
+     *                     ))
+     *                 ))
+     *             )),
+     *             @OA\Property(property="current_page", type="integer", example=1),
+     *             @OA\Property(property="last_page", type="integer", example=5),
+     *             @OA\Property(property="per_page", type="integer", example=6),
+     *             @OA\Property(property="total", type="integer", example=30)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(property="errors", type="object", example={
+     *                 "nombre": {"El campo nombre debe ser una cadena de texto."},
+     *                 "perPage": {"El campo perPage debe ser un número entero."}
+     *             })
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Error interno del servidor")
+     *         )
+     *     )
+     * )
+     */
     public function listarProductosCatalogo(Request $request)
     {
         // Validar parámetros de entrada
@@ -617,6 +1086,96 @@ class SuperAdminController extends Controller
         ], 200);
     }
 
+
+    /**
+     * @OA\Post(
+     *     path="/api/editarModeloyImagen/{idModelo}",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Editar un modelo y sus imágenes",
+     *     description="Permite a un superadministrador editar un modelo existente, incluyendo su nombre, descripción y la gestión de imágenes (añadir nuevas o reemplazar existentes).",
+     *     operationId="editarModeloYImagen",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="idModelo",
+     *         in="path",
+     *         required=true,
+     *         description="ID del modelo que se desea editar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos del modelo y sus imágenes",
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"nombreModelo"},
+     *                 @OA\Property(property="nombreModelo", type="string", example="Modelo Actualizado"),
+     *                 @OA\Property(property="descripcion", type="string", nullable=true, example="Descripción actualizada"),
+     *                 @OA\Property(
+     *                     property="nuevasImagenes",
+     *                     type="array",
+     *                     @OA\Items(type="string", format="binary", description="Nuevas imágenes para el modelo")
+     *                 ),
+     *                 @OA\Property(
+     *                     property="idImagenesReemplazadas",
+     *                     type="array",
+     *                     @OA\Items(type="integer", example=1),
+     *                     description="IDs de las imágenes existentes que se desean reemplazar"
+     *                 ),
+     *                 @OA\Property(
+     *                     property="imagenesReemplazadas",
+     *                     type="array",
+     *                     @OA\Items(type="string", format="binary", description="Nuevas imágenes para reemplazar las existentes")
+     *                 )
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Modelo e imágenes actualizados correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Modelo e imágenes actualizados correctamente")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Modelo no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Modelo no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 example={
+     *                     "nombreModelo": {"El campo nombreModelo es obligatorio."},
+     *                     "nuevasImagenes.0": {"El archivo debe ser una imagen válida."}
+     *                 }
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al actualizar el modelo e imágenes"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function editarModeloYImagen(Request $request, $idModelo)
     {
         $modelo = Modelo::findOrFail($idModelo);
@@ -720,6 +1279,72 @@ class SuperAdminController extends Controller
     }
 
 
+        /**
+     * @OA\Post(
+     *     path="/api/agregarModelo",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Agregar un nuevo modelo a un producto",
+     *     description="Permite a un superadministrador agregar un nuevo modelo a un producto existente. Se valida que el producto exista y se genera una ruta para el modelo basada en el nombre del producto.",
+     *     operationId="agregarModelo",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos del modelo a agregar",
+     *         @OA\JsonContent(
+     *             required={"idProducto", "nombreModelo"},
+     *             @OA\Property(property="idProducto", type="integer", example=1),
+     *             @OA\Property(property="nombreModelo", type="string", example="Modelo Ejemplo")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=201,
+     *         description="Modelo agregado correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="idModelo", type="integer", example=1),
+     *             @OA\Property(property="idProducto", type="integer", example=1),
+     *             @OA\Property(property="nombreModelo", type="string", example="Modelo Ejemplo"),
+     *             @OA\Property(property="urlModelo", type="string", example="imagenes/productos/Producto Ejemplo/modelos/Modelo Ejemplo")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 example={
+     *                     "idProducto": {"El campo idProducto es obligatorio."},
+     *                     "nombreModelo": {"El campo nombreModelo es obligatorio."}
+     *                 }
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Producto no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Producto no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al agregar el modelo"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function agregarModelo(Request $request)
     {
         $request->validate([
@@ -742,6 +1367,54 @@ class SuperAdminController extends Controller
         return response()->json($modelo, 201);
     }
 
+
+    /**
+     * @OA\Delete(
+     *     path="/api/EliminarModelo/{idModelo}",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Eliminar un modelo y sus imágenes asociadas",
+     *     description="Permite a un superadministrador eliminar un modelo y todas sus imágenes asociadas, tanto de la base de datos como del almacenamiento. Además, elimina el directorio donde se almacenaban las imágenes.",
+     *     operationId="EliminarModelo",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="idModelo",
+     *         in="path",
+     *         required=true,
+     *         description="ID del modelo que se desea eliminar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Modelo y sus imágenes eliminados correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Modelo y sus imágenes eliminados correctamente"),
+     *             @OA\Property(property="directory_deleted", type="string", example="imagenes/productos/Producto Ejemplo/modelos/Modelo Ejemplo")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Modelo no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Modelo no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al eliminar el modelo"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function EliminarModelo($idModelo)
     {
         try {
@@ -801,6 +1474,53 @@ class SuperAdminController extends Controller
         }
     }
 
+
+    /**
+     * @OA\Delete(
+     *     path="/api/eliminarImagenModelo/{idImagen}",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Eliminar una imagen de un modelo",
+     *     description="Permite a un superadministrador eliminar una imagen asociada a un modelo, tanto físicamente del almacenamiento como de la base de datos. Además, registra la acción en el log del sistema.",
+     *     operationId="eliminarImagenModelo",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="idImagen",
+     *         in="path",
+     *         required=true,
+     *         description="ID de la imagen que se desea eliminar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Imagen eliminada correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Imagen eliminada correctamente")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Imagen no encontrada",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Imagen no encontrada")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al eliminar la imagen"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function eliminarImagenModelo($idImagen)
     {
         // Buscar la imagen en la base de datos
@@ -836,6 +1556,61 @@ class SuperAdminController extends Controller
     }
     
 
+    /**
+     * @OA\Put(
+     *     path="/api/actualizarProducto/{idProducto}",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Actualizar un producto existente",
+     *     description="Permite a un superadministrador actualizar los datos de un producto existente, incluyendo su nombre y descripción. Además, registra la acción en el log del sistema.",
+     *     operationId="actualizarProducto",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="idProducto",
+     *         in="path",
+     *         required=true,
+     *         description="ID del producto que se desea actualizar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos del producto que se desean actualizar",
+     *         @OA\JsonContent(
+     *             required={"nombreProducto"},
+     *             @OA\Property(property="nombreProducto", type="string", example="Producto Actualizado"),
+     *             @OA\Property(property="descripcion", type="string", nullable=true, example="Descripción actualizada")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Producto actualizado correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Producto actualizado correctamente")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Producto no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Producto no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al actualizar el producto"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function actualizarProducto(Request $request, $idProducto)
     {
         $producto = Producto::find($idProducto);
@@ -862,13 +1637,75 @@ class SuperAdminController extends Controller
         return response()->json(['message' => 'Producto actualizado correctamente']);
     }
 
-    // public function cambiarEstadoProducto(Request $request, $id) {
-    //     $producto = Producto::findOrFail($id);
-    //     $producto->estado = $request->estado;
-    //     $producto->save();
-    //     return response()->json(['message' => 'Estado actualizado']);
-    // }
-
+    
+        /**
+     * @OA\Put(
+     *     path="/api/cambiarEstadoProducto/{id}",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Cambiar el estado de un producto",
+     *     description="Permite a un superadministrador cambiar el estado de un producto. Además, registra la acción en el log del sistema.",
+     *     operationId="cambiarEstadoProducto",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del producto cuyo estado se desea cambiar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Nuevo estado del producto",
+     *         @OA\JsonContent(
+     *             required={"estado"},
+     *             @OA\Property(property="estado", type="string", example="activo")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Estado actualizado correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Estado actualizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Producto no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Producto no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 example={
+     *                     "estado": {"El campo estado es obligatorio."}
+     *                 }
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al cambiar el estado del producto"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function cambiarEstadoProducto(Request $request, $id)
     {
         $producto = Producto::findOrFail($id);
@@ -890,6 +1727,76 @@ class SuperAdminController extends Controller
         return response()->json(['message' => 'Estado actualizado']);
     }
     
+
+        /**
+     * @OA\Post(
+     *     path="/api/categorias",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Agregar una nueva categoría",
+     *     description="Permite a un superadministrador agregar una nueva categoría, incluyendo su nombre, descripción e imagen. Además, registra la acción en el log del sistema.",
+     *     operationId="agregarCategorias",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos de la categoría y su imagen",
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 required={"nombreCategoria", "imagen"},
+     *                 @OA\Property(property="nombreCategoria", type="string", example="Electrónica"),
+     *                 @OA\Property(property="descripcion", type="string", nullable=true, example="Categoría de productos electrónicos"),
+     *                 @OA\Property(property="imagen", type="string", format="binary", description="Imagen de la categoría (formato: jpeg, png, jpg, gif, svg, tamaño máximo: 5MB)")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Categoría agregada exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Categoría agregada exitosamente"),
+     *             @OA\Property(
+     *                 property="categoria",
+     *                 type="object",
+     *                 @OA\Property(property="idCategoria", type="integer", example=1),
+     *                 @OA\Property(property="nombreCategoria", type="string", example="Electrónica"),
+     *                 @OA\Property(property="descripcion", type="string", example="Categoría de productos electrónicos"),
+     *                 @OA\Property(property="imagen", type="string", example="imagenes/categorias/Electrónica/imagen.jpg"),
+     *                 @OA\Property(property="estado", type="string", example="activo")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 example={
+     *                     "nombreCategoria": {"El campo nombreCategoria es obligatorio."},
+     *                     "imagen": {"El campo imagen es obligatorio."}
+     *                 }
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al agregar la categoría"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function agregarCategorias(Request $request)
     {
         // Validar los datos de entrada
@@ -986,6 +1893,96 @@ class SuperAdminController extends Controller
     }
 
 
+        /**
+     * @OA\Get(
+     *     path="/api/obtenerCategorias",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Obtener categorías con filtros y paginación",
+     *     description="Permite a un superadministrador obtener una lista de categorías con opciones de filtrado por ID, nombre, descripción, estado y búsqueda general. Además, incluye paginación.",
+     *     operationId="obtenerCategorias",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Número de página (por defecto 1)",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="limit",
+     *         in="query",
+     *         description="Límite de elementos por página (por defecto 5)",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=5)
+     *     ),
+     *     @OA\Parameter(
+     *         name="idCategoria",
+     *         in="query",
+     *         description="Filtrar por ID de categoría (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="1")
+     *     ),
+     *     @OA\Parameter(
+     *         name="nombreCategoria",
+     *         in="query",
+     *         description="Filtrar por nombre de categoría (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Electrónica")
+     *     ),
+     *     @OA\Parameter(
+     *         name="descripcion",
+     *         in="query",
+     *         description="Filtrar por descripción de categoría (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Categoría de productos electrónicos")
+     *     ),
+     *     @OA\Parameter(
+     *         name="estado",
+     *         in="query",
+     *         description="Filtrar por estado de categoría (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="activo")
+     *     ),
+     *     @OA\Parameter(
+     *         name="searchTerm",
+     *         in="query",
+     *         description="Búsqueda general en ID, nombre, descripción y estado de categoría (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Electrónica")
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de categorías obtenida exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="data", type="array", @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="idCategoria", type="integer", example=1),
+     *                 @OA\Property(property="nombreCategoria", type="string", example="Electrónica"),
+     *                 @OA\Property(property="descripcion", type="string", example="Categoría de productos electrónicos"),
+     *                 @OA\Property(property="estado", type="string", example="activo")
+     *             )),
+     *             @OA\Property(property="total", type="integer", example=100),
+     *             @OA\Property(property="page", type="integer", example=1),
+     *             @OA\Property(property="totalPages", type="integer", example=20)
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al obtener las categorías"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function obtenerCategorias(Request $request)
     {
         // Obtener los parámetros de paginación
@@ -1036,6 +2033,91 @@ class SuperAdminController extends Controller
     }
 
 
+        /**
+     * @OA\Get(
+     *     path="/api/listarCategorias",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Listar categorías con filtros y paginación",
+     *     description="Permite a un superadministrador listar categorías con opciones de filtrado por ID, nombre, descripción y búsqueda general. Solo se incluyen categorías con estado 'activo'.",
+     *     operationId="listarCategorias",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="idCategoria",
+     *         in="query",
+     *         description="Filtrar por ID de categoría (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="1")
+     *     ),
+     *     @OA\Parameter(
+     *         name="nombreCategoria",
+     *         in="query",
+     *         description="Filtrar por nombre de categoría (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Electrónica")
+     *     ),
+     *     @OA\Parameter(
+     *         name="descripcion",
+     *         in="query",
+     *         description="Filtrar por descripción de categoría (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Categoría de productos electrónicos")
+     *     ),
+     *     @OA\Parameter(
+     *         name="searchTerm",
+     *         in="query",
+     *         description="Búsqueda general en ID, nombre y descripción de categoría (búsqueda parcial)",
+     *         required=false,
+     *         @OA\Schema(type="string", example="Electrónica")
+     *     ),
+     *     @OA\Parameter(
+     *         name="page",
+     *         in="query",
+     *         description="Número de página (por defecto 1)",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\Parameter(
+     *         name="perPage",
+     *         in="query",
+     *         description="Número de elementos por página (por defecto 10)",
+     *         required=false,
+     *         @OA\Schema(type="integer", example=10)
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de categorías obtenida exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="data", type="array", @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="idCategoria", type="integer", example=1),
+     *                 @OA\Property(property="nombreCategoria", type="string", example="Electrónica"),
+     *                 @OA\Property(property="descripcion", type="string", example="Categoría de productos electrónicos"),
+     *                 @OA\Property(property="imagen", type="string", example="http://example.com/imagen.jpg")
+     *             )),
+     *             @OA\Property(property="pagination", type="object",
+     *                 @OA\Property(property="total", type="integer", example=100),
+     *                 @OA\Property(property="perPage", type="integer", example=10),
+     *                 @OA\Property(property="currentPage", type="integer", example=1),
+     *                 @OA\Property(property="lastPage", type="integer", example=10)
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Error interno del servidor")
+     *         )
+     *     )
+     * )
+     */
     public function listarCategorias(Request $request)
     {
         // Obtener los parámetros de filtro y búsqueda
@@ -1092,6 +2174,42 @@ class SuperAdminController extends Controller
         return response()->json($response);
     }
 
+
+    /**
+     * @OA\Get(
+     *     path="/api/listarCategoriasFiltrador",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Listar categorías activas para filtrado",
+     *     description="Permite a un superadministrador obtener una lista de todas las categorías con estado 'activo', seleccionando solo los campos necesarios (ID y nombre).",
+     *     operationId="listarCategoriasFiltrador",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Response(
+     *         response=200,
+     *         description="Lista de categorías obtenida exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="data", type="array", @OA\Items(
+     *                 type="object",
+     *                 @OA\Property(property="idCategoria", type="integer", example=1),
+     *                 @OA\Property(property="nombreCategoria", type="string", example="Electrónica")
+     *             ))
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Error interno del servidor")
+     *         )
+     *     )
+     * )
+     */
     public function listarCategoriasFiltrador(Request $request)
     {
         // Construir la consulta
@@ -1114,7 +2232,75 @@ class SuperAdminController extends Controller
         return response()->json($response);
     }
     
-        
+
+       /**
+     * @OA\Put(
+     *     path="/api/cambiarEstadoCategoria/{id}",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Cambiar el estado de una categoría",
+     *     description="Permite a un superadministrador cambiar el estado de una categoría entre 'activo' e 'inactivo'. Además, registra la acción en el log del sistema.",
+     *     operationId="cambiarEstadoCategoria",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID de la categoría cuyo estado se desea cambiar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Nuevo estado de la categoría",
+     *         @OA\JsonContent(
+     *             required={"estado"},
+     *             @OA\Property(property="estado", type="string", enum={"activo", "inactivo"}, example="activo")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Estado actualizado correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Estado actualizado correctamente")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Categoría no encontrada",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Categoría no encontrada")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 example={
+     *                     "estado": {"El campo estado es obligatorio."}
+     *                 }
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al cambiar el estado de la categoría"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function cambiarEstadoCategoria($id, Request $request)
     {
         // Validar el estado recibido
@@ -1148,6 +2334,72 @@ class SuperAdminController extends Controller
     }
     
 
+    /**
+     * @OA\Put(
+     *     path="/api/actualizarCategoria/{id}",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Actualizar una categoría existente",
+     *     description="Permite a un superadministrador actualizar los datos de una categoría existente, incluyendo su nombre, descripción e imagen. Además, registra la acción en el log del sistema.",
+     *     operationId="actualizarCategoria",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID de la categoría que se desea actualizar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos de la categoría y su imagen",
+     *         @OA\MediaType(
+     *             mediaType="multipart/form-data",
+     *             @OA\Schema(
+     *                 @OA\Property(property="nombreCategoria", type="string", example="Electrónica"),
+     *                 @OA\Property(property="descripcion", type="string", example="Categoría de productos electrónicos"),
+     *                 @OA\Property(property="imagen", type="string", format="binary", description="Nueva imagen de la categoría (formato: jpeg, png, jpg, gif, svg, tamaño máximo: 5MB)")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Categoría actualizada exitosamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Categoría actualizada exitosamente"),
+     *             @OA\Property(
+     *                 property="data",
+     *                 type="object",
+     *                 @OA\Property(property="idCategoria", type="integer", example=1),
+     *                 @OA\Property(property="nombreCategoria", type="string", example="Electrónica"),
+     *                 @OA\Property(property="descripcion", type="string", example="Categoría de productos electrónicos"),
+     *                 @OA\Property(property="imagen", type="string", example="imagenes/categorias/Electrónica/imagen.jpg"),
+     *                 @OA\Property(property="estado", type="string", example="activo")
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Categoría no encontrada",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Categoría no encontrada")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="Error al actualizar la categoría: Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function actualizarCategoria(Request $request, $id)
     {
         Log::info('Iniciando actualización de categoría', [
@@ -1244,6 +2496,77 @@ class SuperAdminController extends Controller
     }
 
 
+        /**
+     * @OA\Post(
+     *     path="/api/usuarios/{id}/cambiar-password",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Cambiar la contraseña de un usuario",
+     *     description="Permite a un superadministrador cambiar la contraseña de un usuario específico. Además, registra la acción en el log del sistema.",
+     *     operationId="cambiarPassword",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del usuario cuya contraseña se desea cambiar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Nueva contraseña del usuario",
+     *         @OA\JsonContent(
+     *             required={"password"},
+     *             @OA\Property(property="password", type="string", format="password", example="nuevaContraseña123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Contraseña actualizada correctamente",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=true),
+     *             @OA\Property(property="message", type="string", example="Contraseña actualizada correctamente")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Usuario no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Usuario no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 example={
+     *                     "password": {"El campo password es obligatorio."}
+     *                 }
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="success", type="boolean", example=false),
+     *             @OA\Property(property="message", type="string", example="Error al actualizar la contraseña")
+     *         )
+     *     )
+     * )
+     */
     public function cambiarPassword(Request $request, $id)
     {
         // Validar la entrada
@@ -1287,6 +2610,76 @@ class SuperAdminController extends Controller
     }
 
 
+    /**
+     * @OA\Put(
+     *     path="/api/password/{id}",
+     *     tags={"SUPERADMIN CONTROLLER"},
+     *     summary="Actualizar la contraseña de un superadministrador",
+     *     description="Permite a un superadministrador actualizar la contraseña de otro superadministrador. La contraseña debe tener al menos 8 caracteres y ser confirmada.",
+     *     operationId="updatePasswordSuperAdmin",
+     *     security={{"bearerAuth": {}}},
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID del superadministrador cuya contraseña se desea actualizar",
+     *         @OA\Schema(type="integer", example=1)
+     *     ),
+     *     @OA\RequestBody(
+     *         required=true,
+     *         description="Datos para actualizar la contraseña",
+     *         @OA\JsonContent(
+     *             required={"password", "password_confirmation"},
+     *             @OA\Property(property="password", type="string", format="password", example="nuevaContraseña123"),
+     *             @OA\Property(property="password_confirmation", type="string", format="password", example="nuevaContraseña123")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=200,
+     *         description="Contraseña actualizada con éxito",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Contraseña actualizada con éxito")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Superadministrador no encontrado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Superadministrador no encontrado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=422,
+     *         description="Error de validación",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error de validación"),
+     *             @OA\Property(
+     *                 property="errors",
+     *                 type="object",
+     *                 example={
+     *                     "password": {"El campo password es obligatorio."},
+     *                     "password_confirmation": {"El campo password confirmation es obligatorio."}
+     *                 }
+     *             )
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=401,
+     *         description="No autorizado",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="error", type="string", example="No autorizado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=500,
+     *         description="Error interno del servidor",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="message", type="string", example="Error al actualizar la contraseña"),
+     *             @OA\Property(property="error", type="string", example="Mensaje de error detallado")
+     *         )
+     *     )
+     * )
+     */
     public function updatePasswordSuperAdmin(Request $request, $id)
     {
         // Validar entrada

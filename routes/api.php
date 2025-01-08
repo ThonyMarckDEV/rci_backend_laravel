@@ -64,22 +64,14 @@ use App\Http\Controllers\SuperAdminController;
         Route::put('/password/{id}', [SuperAdminController::class, 'updatePasswordSuperAdmin']);
 
         Route::get('/listarProductos/{id}', [SuperAdminController::class, 'listarProductos']);
-        Route::put('/actualizarUsuario/{id}', [SuperAdminController::class, 'actualizarUsuario']);
-        Route::delete('/eliminarUsuario/{id}', [SuperAdminController::class, 'eliminarUsuario']);
-       
-
 
         Route::post('/categorias', [SuperAdminController::class, 'agregarCategorias']);
         Route::get('/obtenerCategorias', [SuperAdminController::class, 'obtenerCategorias']);
         Route::post('/actualizarCategoria/{id}', [SuperAdminController::class, 'actualizarCategoria']);
-        Route::delete('/eliminarCategoria/{id}', [SuperAdminController::class, 'eliminarCategoria']);
-      
         Route::put('/cambiarEstadoCategoria/{id}', [SuperAdminController::class, 'cambiarEstadoCategoria']);
 
 
         Route::get('/listarUsuarios', [SuperAdminController::class, 'listarUsuarios']);
-
-
         Route::get('/obtenerInfoAdmins', [DashboardController::class, 'obtenerInfoAdmins']);
         Route::get('/logs', [DashboardController::class, 'getLogs']);
     });
