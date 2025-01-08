@@ -48,16 +48,6 @@ use App\Http\Controllers\SuperAdminController;
         Route::delete('/EliminarModelo/{idModelo}', [SuperAdminController::class, 'EliminarModelo']);
     });
 
-
-    //================================================================================================
-    //RUTAS  DASHBOARD PROTEGIDAS par todos los roles
-
-    Route::middleware(['auth.jwt', 'checkRoleMW:superadmin'])->group(function () {
-
-        Route::get('/obtenerInfoAdmins', [DashboardController::class, 'obtenerInfoAdmins']);
-        Route::get('/logs', [DashboardController::class, 'getLogs']);
-    });
-
 //================================================================================================
     //RUTAS PROTEGIDAS A
     // RUTAS PARA ADMINISTRADOR VALIDADA POR MIDDLEWARE AUTH (PARA TOKEN JWT) Y CHECKROLE (PARA VALIDAR ROL DEL TOKEN)
@@ -90,6 +80,8 @@ use App\Http\Controllers\SuperAdminController;
         Route::get('listarUsuarios', [SuperAdminController::class, 'listarUsuarios']);
 
 
+        Route::get('/obtenerInfoAdmins', [DashboardController::class, 'obtenerInfoAdmins']);
+        Route::get('/logs', [DashboardController::class, 'getLogs']);
     });
 
 
