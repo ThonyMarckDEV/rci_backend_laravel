@@ -5,79 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nuevo mensaje de contacto - RCI Muebles</title>
     <style>
-        /* Fuerza el fondo del body a blanco */
         body {
             font-family: Arial, sans-serif;
             line-height: 1.6;
             margin: 0;
             padding: 20px;
-            background-color: #ffffff !important; /* Fondo blanco forzado */
         }
-
-        /* Contenedor principal con imagen de fondo */
+        
         .email-container {
             background-image: url('https://talararci.thonymarckdev.online/storage/imagenes/logo/blanco.jpg');
-            background-size: cover; /* Ajusta la imagen al tamaño del contenedor */
-            background-position: center; /* Centra la imagen */
+            background-size: cover;
+            background-position: center;
             border-radius: 8px;
             padding: 30px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             max-width: 600px;
             margin: 0 auto;
-            position: relative; /* Para posicionar el contenido encima */
+            position: relative;
         }
-
-        /* Estilos del encabezado */
+        
         .header {
             text-align: center;
             margin-bottom: 30px;
             border-bottom: 2px solid #E4A853;
             padding-bottom: 20px;
         }
-
+        
         .logo {
             width: 150px;
             height: auto;
         }
-
+        
         h1 {
             color: #8B4513;
             font-size: 24px;
             margin: 20px 0;
         }
-
-        /* Contenido principal */
+        
         .content {
-            background-color: transparent; /* Fondo transparente */
+            background-color: transparent;
             padding: 20px;
-            border-radius: 8px; /* Bordes redondeados */
+            border-radius: 8px;
         }
-
+        
         .field {
             margin-bottom: 20px;
         }
-
+        
         .label {
             color: #E4A853;
             font-weight: bold;
             display: block;
             margin-bottom: 5px;
         }
-
+        
         .value {
-            color: #333;
-            background-color: transparent; /* Fondo transparente */
-            padding: 10px;
-            border-radius: 4px;
-            border-left: 3px solid #E4A853; /* Borde naranja a la izquierda */
-            border: 1px solid #E4A853; /* Borde naranja alrededor */
+            color: #666 !important;
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+            -webkit-text-fill-color: #000000;
+            text-shadow: 0 0 0 #000000;
         }
-
+        
         .message-content {
             white-space: pre-line;
         }
-
-        /* Pie de página */
+        
         .footer {
             text-align: center;
             margin-top: 30px;
@@ -89,33 +83,29 @@
     </style>
 </head>
 <body>
-   <!-- Card con imagen de fondo y contenido superpuesto -->
     <div class="email-container">
         <div class="header">
-            <!-- Logo -->
             <img src="https://talararci.thonymarckdev.online/storage/imagenes/logo/rcilogofondoblanco.jpg" alt="RCI Muebles" class="logo">
             <h1>Nuevo mensaje de contacto</h1>
         </div>
-
+        
         <div class="content">
             <div class="field">
                 <span class="label">Nombre:</span>
-                <div class='value'>{{ $name }}</div> <!-- Negro explícito -->
+                <div class='value'>{{ $name }}</div>
             </div>
-
+            
             <div class="field">
                 <span class="label">Correo:</span>
-                <div class="value">{{ $email }}</div> <!-- Mantiene el color original -->
+                <div class="value">{{ $email }}</div>
             </div>
-
+            
             <div class="field">
                 <span class="label">Mensaje:</span>
-                <div class='value'>{{ $messageContent }}</div> <!-- Negro explícito -->
+                <div class='value'>{{ $messageContent }}</div>
             </div>
         </div>
-
-
-        <!-- Pie de página -->
+        
         <div class="footer">
             <p>Este es un mensaje automático de RCI Muebles</p>
             <p>Calidad sin límites a cómodos precios</p>
