@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Mail;
 
 /**
 * @OA\Info(
-*    title="ECOMMERCE API DOCUMENTATION", 
+*    title="RCI-BACKEND API DOCUMENTATION", 
 *    version="1.0",
 *    description="API DOCUMENTATION"
 * )
@@ -90,6 +90,99 @@ class AuthController extends Controller
      *     )
      * )
      */
+    // public function login(Request $request)
+    // {
+    //     // Validar que el correo y la contraseña están presentes
+    //     $request->validate([
+    //         'correo' => 'required|email',
+    //         'password' => 'required|string|min:6',
+    //     ]);
+
+    //     // Obtener las credenciales de correo y contraseña
+    //     $credentials = [
+    //         'correo' => $request->input('correo'),
+    //         'password' => $request->input('password')
+    //     ];
+
+    //     try {
+    //         // Buscar el usuario por correo
+    //         $usuario = Usuario::where('correo', $credentials['correo'])->first();
+
+    //         // Verificar si el usuario existe
+    //         if (!$usuario) {
+    //             return response()->json(['error' => 'Usuario no encontrado'], 404);
+    //         }
+
+    //         // Verificar si el usuario está inactivo
+    //         if ($usuario->estado === 'inactivo') {
+    //             return response()->json(['error' => 'Usuario inactivo. Por favor, contacte al administrador.'], 403);
+    //         }
+
+    //         // Intentar autenticar y generar el token JWT usando el campo 'correo'
+    //         if (!$token = JWTAuth::attempt(['correo' => $credentials['correo'], 'password' => $credentials['password']])) {
+    //             return response()->json(['error' => 'Credenciales inválidas'], 401);
+    //         }
+
+    //         // Obtener el dispositivo
+    //         $dispositivo = $this->obtenerDispositivo();
+
+    //         // Verificar si ya existe un registro en la tabla 'actividad_usuario' para este usuario
+    //         $actividad = ActividadUsuario::where('idUsuario', $usuario->idUsuario)->first();
+
+    //         if (!$actividad) {
+    //             // Si no existe, crear un nuevo registro
+    //             ActividadUsuario::create([
+    //                 'idUsuario' => $usuario->idUsuario,
+    //                 'last_activity' => now(),
+    //                 'dispositivo' => $dispositivo,
+    //                 'jwt' => $token,
+    //             ]);
+    //         } else {
+    //             // Si ya existe, verificar si el dispositivo ha cambiado
+    //             if ($actividad->dispositivo !== $dispositivo) {
+
+    //                 // Si el dispositivo ha cambiado, invalidar el token anterior (ponerlo como null)
+    //                 $actividad->update([
+    //                     'jwt' => null,  // Invalida el token anterior
+    //                 ]);
+
+    //                 // Crear un nuevo registro de actividad con el nuevo token y dispositivo
+    //                 $actividad->update([
+    //                     'last_activity' => now(),
+    //                     'dispositivo' => $dispositivo,
+    //                     'jwt' => $token,  // Asigna el nuevo token
+    //                 ]);
+    //             } else {
+    //                 // Si el dispositivo es el mismo, solo actualizar el token y la actividad
+    //                 $actividad->update([
+    //                     'last_activity' => now(),
+    //                     'jwt' => $token,  // Actualiza el token
+    //                 ]);
+    //             }
+    //         }
+
+    //         // Actualizar el estado del usuario a "loggedOn"
+    //         $usuario->update(['status' => 'loggedOn']);
+
+    //         // Obtener el ID del usuario autenticado desde el token
+    //         $usuarioId = auth()->id();
+
+    //         // Obtener el nombre completo del usuario autenticado
+    //         $usuario = Usuario::find($usuarioId);
+    //         $nombreUsuario = $usuario->nombres . ' ' . $usuario->apellidos;
+
+    //         // Definir la acción y mensaje para el log
+    //         $accion = "$nombreUsuario inició sesión desde el dispositivo: $dispositivo";
+
+    //         // Llamada a la función agregarLog para registrar el log
+    //         $this->agregarLog($usuarioId, $accion);
+
+    //         return response()->json(compact('token'));
+    //     } catch (JWTException $e) {
+    //         return response()->json(['error' => 'No se pudo crear el token'], 500);
+    //     }
+    // }
+
     public function login(Request $request)
     {
         // Validar que el correo y la contraseña están presentes
@@ -140,41 +233,43 @@ class AuthController extends Controller
             } else {
                 // Si ya existe, verificar si el dispositivo ha cambiado
                 if ($actividad->dispositivo !== $dispositivo) {
-                    // Si el dispositivo ha cambiado, invalidar el token anterior (ponerlo como null)
-                    $actividad->update([
-                        'jwt' => null,  // Invalida el token anterior
-                    ]);
+                    // Si el dispositivo ha cambiado, invalidar el token anterior
+                    if ($actividad->jwt) {
+                        try {
+                            // Configurar el token en JWTAuth
+                            JWTAuth::setToken($actividad->jwt);
 
-                    // Crear un nuevo registro de actividad con el nuevo token y dispositivo
-                    $actividad->update([
-                        'last_activity' => now(),
-                        'dispositivo' => $dispositivo,
-                        'jwt' => $token,  // Asigna el nuevo token
-                    ]);
-                } else {
-                    // Si el dispositivo es el mismo, solo actualizar el token y la actividad
-                    $actividad->update([
-                        'last_activity' => now(),
-                        'jwt' => $token,  // Actualiza el token
-                    ]);
+                            // Verificar que el token sea válido antes de intentar invalidarlo
+                            if (JWTAuth::check()) {
+                                // Invalidar el token y forzar su expiración
+                                JWTAuth::invalidate(true);
+                            }
+                        } catch (\Exception $e) {
+                            // Registrar el error si la invalidación falla
+                            Log::error('Error al invalidar el token anterior: ' . $e->getMessage());
+                        }
+                    }
                 }
+
+                // Actualizar la actividad con el nuevo dispositivo y token
+                $actividad->update([
+                    'last_activity' => now(),
+                    'dispositivo' => $dispositivo,
+                    'jwt' => $token,  // Asigna el nuevo token
+                ]);
             }
 
             // Actualizar el estado del usuario a "loggedOn"
             $usuario->update(['status' => 'loggedOn']);
 
-            // Obtener el ID del usuario autenticado desde el token
-            $usuarioId = auth()->id();
-
-            // Obtener el nombre completo del usuario autenticado
-            $usuario = Usuario::find($usuarioId);
+            // Obtener el nombre completo del usuario para el log
             $nombreUsuario = $usuario->nombres . ' ' . $usuario->apellidos;
 
             // Definir la acción y mensaje para el log
             $accion = "$nombreUsuario inició sesión desde el dispositivo: $dispositivo";
 
             // Llamada a la función agregarLog para registrar el log
-            $this->agregarLog($usuarioId, $accion);
+            $this->agregarLog($usuario->idUsuario, $accion);
 
             return response()->json(compact('token'));
         } catch (JWTException $e) {
@@ -253,7 +348,7 @@ class AuthController extends Controller
      *     )
      * )
      */
-    public function logout(Request $request)
+   public function logout(Request $request)
     {
         // Validar que el ID del usuario esté presente y sea un entero
         $request->validate([
@@ -273,10 +368,19 @@ class AuthController extends Controller
                 
                 if ($actividad && $actividad->jwt) {
                     try {
-                        // Invalidar el token actual (agregarlo a la lista negra)
-                        JWTAuth::setToken($actividad->jwt)->invalidate();
+                        // Configurar el token en JWTAuth
+                        $token = $actividad->jwt;
+                        JWTAuth::setToken($token);
+
+                        // Verificar que el token sea válido antes de intentar invalidarlo
+                        if (JWTAuth::check()) {
+                            // Invalidar el token y forzar su expiración
+                            JWTAuth::invalidate(true);
+                        }
+                    } catch (JWTException $e) {
+                        Log::error('Error al invalidar token: ' . $e->getMessage());
                     } catch (\Exception $e) {
-                        // Si hay error al invalidar el token, continuamos ya que podría estar expirado
+                        Log::error('Error general con el token: ' . $e->getMessage());
                     }
                 }
 
@@ -417,12 +521,14 @@ class AuthController extends Controller
         return response()->json(['message' => 'Last activity updated'], 200);
     }
 
-
     /**
      * @OA\Post(
      *     path="/api/check-status",
-     *     summary="Verificar el estado del usuario",
-     *     description="Este endpoint verifica el estado del usuario, si está conectado o desconectado.",
+     *     summary="Verificar el estado del usuario y la validez del token",
+     *     description="Este endpoint verifica el estado del usuario y la validez del token JWT proporcionado. 
+     *                  Compara el token JWT del encabezado de autorización con el token almacenado en la base de datos 
+     *                  para el usuario especificado. Si el token no coincide o el usuario no tiene un registro de actividad, 
+     *                  se devuelve un error.",
      *     operationId="checkStatus",
      *     tags={"AUTH CONTROLLER"},
      *     security={{"bearerAuth": {}}},
@@ -438,68 +544,73 @@ class AuthController extends Controller
      *     ),
      *     @OA\Response(
      *         response=200,
-     *         description="El usuario está activo.",
+     *         description="El token es válido y coincide con el almacenado en la base de datos.",
      *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="active")
+     *             @OA\Property(property="status", type="string", example="success"),
+     *             @OA\Property(property="token", type="string", example="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
      *         )
      *     ),
      *     @OA\Response(
      *         response=400,
-     *         description="ID de usuario no proporcionado.",
+     *         description="Solicitud inválida. El ID de usuario no fue proporcionado o no es un entero válido.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="ID de usuario no proporcionado")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Usuario no encontrado.",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Usuario no encontrado")
+     *             @OA\Property(property="message", type="string", example="ID de usuario no proporcionado o inválido")
      *         )
      *     ),
      *     @OA\Response(
      *         response=403,
-     *         description="Usuario desconectado.",
+     *         description="El token proporcionado no coincide con el token almacenado en la base de datos.",
      *         @OA\JsonContent(
      *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Usuario desconectado")
+     *             @OA\Property(property="message", type="string", example="El token no coincide con el almacenado")
+     *         )
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="No se encontró un registro de actividad para el usuario especificado.",
+     *         @OA\JsonContent(
+     *             @OA\Property(property="status", type="string", example="error"),
+     *             @OA\Property(property="message", type="string", example="Usuario no encontrado")
      *         )
      *     )
      * )
      */
-    // Endpoint para verificar el estado del usuario y el token
     public function checkStatus(Request $request)
     {
         // Validar que el idUsuario esté presente
         $request->validate([
             'idUsuario' => 'required|integer',
         ]);
-    
+
         $idUsuario = $request->input('idUsuario');
         $token = $request->bearerToken(); // Obtener el token JWT del encabezado Authorization
-    
+
         // Buscar el registro de actividad del usuario en la base de datos
         $actividadUsuario = ActividadUsuario::where('idUsuario', $idUsuario)->first();
-    
+
         // Si no hay un registro de actividad, devolver un error
         if (!$actividadUsuario) {
-            return response()->json(['error' => 'Usuario no encontrado'], 404);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Usuario no encontrado'
+            ], 404);
         }
-    
+
         // Verificar si el token en la base de datos es diferente al token actual
         if ($actividadUsuario->jwt !== $token) {
-            return response()->json(['error' => 'El token no coincide con el almacenado'], 403);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'El token no coincide con el almacenado'
+            ], 403);
         }
-    
+
         // Si el token es válido, devolver el estado y el token actual
         return response()->json([
             'status' => 'success',
             'token' => $actividadUsuario->jwt  // Devuelves el token almacenado en la base de datos
         ]);
     }
-    
 
     /**
      * @OA\Post(
@@ -558,7 +669,7 @@ class AuthController extends Controller
  
          // Envía el correo
          Mail::send('emails.contact', $data, function($message) use ($request) {
-             $message->to('destinatario@example.com', 'Administrador')
+             $message->to('thonymarck385213xd@gmail.com', 'Administrador')
                      ->subject('Nuevo mensaje de contacto');
              $message->from($request->email, $request->name);
          });

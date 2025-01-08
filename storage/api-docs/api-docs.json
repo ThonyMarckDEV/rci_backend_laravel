@@ -1,7 +1,7 @@
 {
     "openapi": "3.0.0",
     "info": {
-        "title": "ECOMMERCE API DOCUMENTATION",
+        "title": "RCI-BACKEND API DOCUMENTATION",
         "description": "API DOCUMENTATION",
         "version": "1.0"
     },
@@ -17,20 +17,27 @@
                     "AUTH CONTROLLER"
                 ],
                 "summary": "Login de usuario",
-                "description": "Login",
-                "operationId": "a3b306d14572d1f4bd6c064b3233e7b8",
+                "description": "Permite a los usuarios autenticarse en el sistema y obtener un token JWT.",
+                "operationId": "login",
                 "requestBody": {
+                    "description": "Credenciales del usuario",
                     "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "required": [
+                                    "correo",
+                                    "password"
+                                ],
                                 "properties": {
                                     "correo": {
                                         "type": "string",
+                                        "format": "email",
                                         "example": "usuario@dominio.com"
                                     },
                                     "password": {
                                         "type": "string",
+                                        "format": "password",
                                         "example": "contraseña123"
                                     }
                                 },
@@ -56,14 +63,85 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Datos de entrada inválidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "example": "El campo correo es requerido."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
                     "401": {
-                        "description": "Credenciales inválidas"
+                        "description": "Credenciales inválidas",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "example": "Credenciales inválidas"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Usuario inactivo",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "example": "Usuario inactivo. Por favor, contacte al administrador."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "404": {
-                        "description": "Usuario no encontrado"
+                        "description": "Usuario no encontrado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "example": "Usuario no encontrado"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "500": {
-                        "description": "Error al generar el token"
+                        "description": "Error al generar el token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "error": {
+                                            "type": "string",
+                                            "example": "No se pudo crear el token"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -77,6 +155,7 @@
                 "description": "Este endpoint se utiliza para cerrar sesión de un usuario y revocar su token JWT.",
                 "operationId": "logout",
                 "requestBody": {
+                    "description": "ID del usuario que desea cerrar sesión",
                     "required": true,
                     "content": {
                         "application/json": {
@@ -87,7 +166,8 @@
                                 "properties": {
                                     "idUsuario": {
                                         "description": "ID del usuario que desea cerrar sesión.",
-                                        "type": "integer"
+                                        "type": "integer",
+                                        "example": 1
                                     }
                                 },
                                 "type": "object"
@@ -97,7 +177,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Usuario deslogueado correctamente.",
+                        "description": "Usuario deslogueado correctamente",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -116,8 +196,48 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Datos de entrada inválidos",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "El campo idUsuario es requerido."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No autorizado",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No autorizado."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
                     "404": {
-                        "description": "No se encontró el usuario.",
+                        "description": "Usuario no encontrado",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -137,12 +257,16 @@
                         }
                     },
                     "500": {
-                        "description": "Error al desloguear al usuario.",
+                        "description": "Error al desloguear al usuario",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
-                                        "error": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": false
+                                        },
+                                        "message": {
                                             "type": "string",
                                             "example": "No se pudo desloguear al usuario."
                                         }
@@ -242,8 +366,8 @@
                 "tags": [
                     "AUTH CONTROLLER"
                 ],
-                "summary": "Verificar el estado del usuario",
-                "description": "Este endpoint verifica el estado del usuario, si está conectado o desconectado.",
+                "summary": "Verificar el estado del usuario y la validez del token",
+                "description": "Este endpoint verifica el estado del usuario y la validez del token JWT proporcionado. \n     *                  Compara el token JWT del encabezado de autorización con el token almacenado en la base de datos \n     *                  para el usuario especificado. Si el token no coincide o el usuario no tiene un registro de actividad, \n     *                  se devuelve un error.",
                 "operationId": "checkStatus",
                 "parameters": [
                     {
@@ -259,14 +383,18 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "El usuario está activo.",
+                        "description": "El token es válido y coincide con el almacenado en la base de datos.",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "properties": {
                                         "status": {
                                             "type": "string",
-                                            "example": "active"
+                                            "example": "success"
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                                         }
                                     },
                                     "type": "object"
@@ -275,7 +403,7 @@
                         }
                     },
                     "400": {
-                        "description": "ID de usuario no proporcionado.",
+                        "description": "Solicitud inválida. El ID de usuario no fue proporcionado o no es un entero válido.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -286,7 +414,27 @@
                                         },
                                         "message": {
                                             "type": "string",
-                                            "example": "ID de usuario no proporcionado"
+                                            "example": "ID de usuario no proporcionado o inválido"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "El token proporcionado no coincide con el token almacenado en la base de datos.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "El token no coincide con el almacenado"
                                         }
                                     },
                                     "type": "object"
@@ -295,7 +443,7 @@
                         }
                     },
                     "404": {
-                        "description": "Usuario no encontrado.",
+                        "description": "No se encontró un registro de actividad para el usuario especificado.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -307,26 +455,6 @@
                                         "message": {
                                             "type": "string",
                                             "example": "Usuario no encontrado"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "403": {
-                        "description": "Usuario desconectado.",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "error"
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Usuario desconectado"
                                         }
                                     },
                                     "type": "object"
