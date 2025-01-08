@@ -6,76 +6,61 @@
     <title>Nuevo mensaje de contacto - RCI Muebles</title>
     <style>
         body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
+            font-family: Arial, sans-serif;
             line-height: 1.6;
-            margin: 0;
-            padding: 40px 20px;
-            background-color: #FFF9E6;
-            color: #2c2c2c;
-        }
-
-        .outer-container {
             max-width: 600px;
             margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 8px 32px rgba(228, 168, 83, 0.1);
+            padding: 20px;
+            background-color: #f9f9f9;
         }
 
         .email-container {
-            max-width: 500px;
-            margin: 0 auto;
             background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .header {
             text-align: center;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #E4A853;
+            padding-bottom: 20px;
         }
 
         .logo {
-            width: 120px;
+            width: 150px;
             height: auto;
-            margin-bottom: 24px;
         }
 
         h1 {
-            font-weight: 300;
+            color: #8B4513;
             font-size: 24px;
-            color: #1a1a1a;
-            margin: 0;
-            letter-spacing: -0.5px;
+            margin: 20px 0;
         }
 
         .content {
-            margin: 32px 0;
+            background-color: #fff;
+            padding: 20px;
         }
 
         .field {
-            margin-bottom: 24px;
-        }
-
-        .field:last-child {
-            margin-bottom: 0;
+            margin-bottom: 20px;
         }
 
         .label {
-            color: #666;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
+            color: #E4A853;
+            font-weight: bold;
             display: block;
+            margin-bottom: 5px;
         }
 
         .value {
-            font-size: 15px;
-            padding: 16px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            color: #2c2c2c;
-            line-height: 1.6;
+            color: #333;
+            background-color: #fafafa;
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 3px solid #E4A853;
         }
 
         .message-content {
@@ -84,66 +69,41 @@
 
         .footer {
             text-align: center;
-            margin-top: 40px;
-            padding-top: 32px;
-            border-top: 1px solid #f0f0f0;
-        }
-
-        .footer p {
-            color: #888;
-            font-size: 13px;
-            margin: 4px 0;
-        }
-
-        .footer p:last-child {
-            color: #aaa;
-            font-style: italic;
-        }
-
-        @media (max-width: 480px) {
-            .outer-container {
-                padding: 24px;
-            }
-            
-            .header {
-                margin-bottom: 32px;
-            }
-            
-            .content {
-                margin: 24px 0;
-            }
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #E4A853;
+            color: #666;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
-    <div class="outer-container">
-        <div class="email-container">
-            <div class="header">
-                <img src="https://rci-eosin.vercel.app/static/media/logorci.f5f2abc26d20172a9a36.png" alt="RCI Muebles" class="logo">
-                <h1>Nuevo mensaje de contacto</h1>
+    <div class="email-container">
+        <div class="header">
+            <img src="https://rci-eosin.vercel.app/static/media/logorci.f5f2abc26d20172a9a36.png" alt="RCI Muebles" class="logo">
+            <h1>Nuevo mensaje de contacto</h1>
+        </div>
+        
+        <div class="content">
+            <div class="field">
+                <span class="label">Nombre:</span>
+                <div class="value">{{ $name }}</div>
             </div>
             
-            <div class="content">
-                <div class="field">
-                    <span class="label">Nombre</span>
-                    <div class="value">{{ $name }}</div>
-                </div>
-                
-                <div class="field">
-                    <span class="label">Correo electrónico</span>
-                    <div class="value">{{ $email }}</div>
-                </div>
-                
-                <div class="field">
-                    <span class="label">Mensaje</span>
-                    <div class="value message-content">{{ $messageContent }}</div>
-                </div>
+            <div class="field">
+                <span class="label">Correo:</span>
+                <div class="value">{{ $email }}</div>
             </div>
+            
+            <div class="field">
+                <span class="label">Mensaje:</span>
+                <div class="value message-content">{{ $messageContent }}</div>
+            </div>
+        </div>
 
-            <div class="footer">
-                <p>Este es un mensaje automático de RCI Muebles</p>
-                <p>Calidad sin límites a cómodos precios</p>
-            </div>
+        <div class="footer">
+            <p>Este es un mensaje automático de RCI Muebles</p>
+            <p>Calidad sin límites a cómodos precios</p>
         </div>
     </div>
 </body>
