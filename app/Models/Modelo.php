@@ -18,7 +18,8 @@ class Modelo extends Model
 
     protected $fillable = [
         'nombreModelo',
-        'idProducto', // Clave foránea hacia productos
+        'idProducto',
+        'urlModelo'
     ];
 
     // Relación de muchos a uno hacia Producto

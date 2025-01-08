@@ -719,16 +719,24 @@ class SuperAdminController extends Controller
         return response()->json(['message' => 'Modelo e imágenes actualizados correctamente']);
     }
 
+
     public function agregarModelo(Request $request)
     {
         $request->validate([
             'idProducto' => 'required|exists:productos,idProducto',
             'nombreModelo' => 'required|string|max:255',
         ]);
-
+        
+        // Obtener el producto para usar su nombre
+        $producto = Producto::findOrFail($request->idProducto);
+        
+        // Construir la ruta del modelo usando el nombre del producto
+        $urlModelo = 'imagenes/productos/' . $producto->nombreProducto . '/modelos/' . $request->nombreModelo;
+        
         $modelo = Modelo::create([
             'idProducto' => $request->idProducto,
             'nombreModelo' => $request->nombreModelo,
+            'urlModelo' => $urlModelo
         ]);
 
         return response()->json($modelo, 201);
@@ -739,51 +747,49 @@ class SuperAdminController extends Controller
         try {
             // Begin transaction
             DB::beginTransaction();
-    
-            // 1. Get all images associated with this modelo
-            $imagenes = ImagenModelo::where('idModelo', $idModelo)->get();
             
-            // Get the modelo to get its name for the directory path
+            // Obtener el modelo
             $modelo = Modelo::findOrFail($idModelo);
             
-            // 2. Delete physical image files from storage and get directory path
-            $modeloDirectory = '';
-            foreach ($imagenes as $imagen) {
-                if ($imagen->urlImagen) {
-                    // Remove 'public/' from the start of the path if it exists
-                    $path = str_replace('public/', '', $imagen->urlImagen);
-                    
-                    // Get the directory path from the first image
-                    if (empty($modeloDirectory)) {
-                        // Example path: "productos/Escritorio Morado/image.jpg"
-                        // We want to get: "productos/Escritorio Morado"
-                        $modeloDirectory = dirname($path);
-                    }
-                    
-                    if (Storage::disk('public')->exists($path)) {
-                        Storage::disk('public')->delete($path);
-                    }
+            // Variable para almacenar la ruta del directorio
+            $directorioABorrar = null;
+            
+            // Primer intento: Verificar si el modelo tiene urlModelo
+            if (!empty($modelo->urlModelo)) {
+                $directorioABorrar = $modelo->urlModelo;
+            } 
+            // Segundo intento: Buscar la ruta en las imágenes relacionadas
+            else {
+                $primeraImagen = ImagenModelo::where('idModelo', $idModelo)
+                                            ->whereNotNull('urlImagen')
+                                            ->first();
+                                            
+                if ($primeraImagen) {
+                    // Remover 'public/' si existe y obtener el directorio padre
+                    $path = str_replace('public/', '', $primeraImagen->urlImagen);
+                    $directorioABorrar = dirname($path);
                 }
             }
-    
-            // Delete the directory if it exists
-            if (!empty($modeloDirectory) && Storage::disk('public')->exists($modeloDirectory)) {
-                Storage::disk('public')->deleteDirectory($modeloDirectory);
-            }
-    
-            // 3. Delete all associated images from imagenes_modelos table
+            
+            // Eliminar todas las imágenes asociadas de la BD
             ImagenModelo::where('idModelo', $idModelo)->delete();
-    
-            // 4. Delete the modelo itself
+            
+            // Eliminar el directorio si se encontró una ruta válida
+            if ($directorioABorrar && Storage::disk('public')->exists($directorioABorrar)) {
+                Storage::disk('public')->deleteDirectory($directorioABorrar);
+            }
+            
+            // Eliminar el modelo
             $modelo->delete();
-    
+            
             // Commit transaction
             DB::commit();
-    
+            
             return response()->json([
-                'message' => 'Modelo y sus imágenes eliminados correctamente'
+                'message' => 'Modelo y sus imágenes eliminados correctamente',
+                'directory_deleted' => $directorioABorrar ?? 'No se encontró directorio para borrar'
             ]);
-    
+            
         } catch (\Exception $e) {
             // Rollback in case of error
             DB::rollBack();
@@ -794,7 +800,6 @@ class SuperAdminController extends Controller
             ], 500);
         }
     }
-
 
     public function eliminarImagenModelo($idImagen)
     {
