@@ -10,17 +10,23 @@
             line-height: 1.6;
             margin: 0;
             padding: 40px 20px;
-            background-color: #fafafa;
+            background-color: #FFF9E6;
             color: #2c2c2c;
+        }
+
+        .outer-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(228, 168, 83, 0.1);
         }
 
         .email-container {
             max-width: 500px;
             margin: 0 auto;
             background-color: #ffffff;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
         }
 
         .header {
@@ -95,7 +101,7 @@
         }
 
         @media (max-width: 480px) {
-            .email-container {
+            .outer-container {
                 padding: 24px;
             }
             
@@ -110,32 +116,34 @@
     </style>
 </head>
 <body>
-    <div class="email-container">
-        <div class="header">
-            <img src="https://rci-eosin.vercel.app/static/media/logorci.f5f2abc26d20172a9a36.png" alt="RCI Muebles" class="logo">
-            <h1>Nuevo mensaje de contacto</h1>
-        </div>
-        
-        <div class="content">
-            <div class="field">
-                <span class="label">Nombre</span>
-                <div class="value">{{ $name }}</div>
+    <div class="outer-container">
+        <div class="email-container">
+            <div class="header">
+                <img src="https://rci-eosin.vercel.app/static/media/logorci.f5f2abc26d20172a9a36.png" alt="RCI Muebles" class="logo">
+                <h1>Nuevo mensaje de contacto</h1>
             </div>
             
-            <div class="field">
-                <span class="label">Correo electrónico</span>
-                <div class="value">{{ $email }}</div>
+            <div class="content">
+                <div class="field">
+                    <span class="label">Nombre</span>
+                    <div class="value">{{ $name }}</div>
+                </div>
+                
+                <div class="field">
+                    <span class="label">Correo electrónico</span>
+                    <div class="value">{{ $email }}</div>
+                </div>
+                
+                <div class="field">
+                    <span class="label">Mensaje</span>
+                    <div class="value message-content">{{ $messageContent }}</div>
+                </div>
             </div>
-            
-            <div class="field">
-                <span class="label">Mensaje</span>
-                <div class="value message-content">{{ $messageContent }}</div>
-            </div>
-        </div>
 
-        <div class="footer">
-            <p>Este es un mensaje automático de RCI Muebles</p>
-            <p>Calidad sin límites a cómodos precios</p>
+            <div class="footer">
+                <p>Este es un mensaje automático de RCI Muebles</p>
+                <p>Calidad sin límites a cómodos precios</p>
+            </div>
         </div>
     </div>
 </body>
