@@ -1678,28 +1678,65 @@ class SuperAdminController extends Controller
      */
     public function actualizarProducto(Request $request, $idProducto)
     {
-        $producto = Producto::find($idProducto);
-
-        if (!$producto) {
-            return response()->json(['error' => 'Producto no encontrado'], 404);
+        try {
+            DB::beginTransaction();
+    
+            // Validar la existencia del producto
+            $producto = Producto::findOrFail($idProducto);
+            
+            // Guardar el nombre antiguo para el log
+            $nombreProductoAntiguo = $producto->nombreProducto;
+            
+            // Validar los datos de entrada
+            $validator = Validator::make($request->all(), [
+                'nombreProducto' => 'required|string|max:255',
+                'descripcion' => 'nullable|string',
+                'idCategoria' => 'required|exists:categorias,idCategoria',
+                'caracteristicas' => 'nullable|string',
+                'estado' => 'nullable|in:activo,inactivo'
+            ]);
+    
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+            
+            // Actualizar datos del producto
+            $producto->update([
+                'nombreProducto' => $request->nombreProducto,
+                'descripcion' => $request->descripcion,
+                'idCategoria' => $request->idCategoria,
+                'estado' => $request->estado ?? $producto->estado
+            ]);
+            
+            // Actualizar o crear características
+            if ($request->has('caracteristicas')) {
+                CaracteristicaProducto::updateOrCreate(
+                    ['idProducto' => $idProducto],
+                    ['caracteristicas' => $request->caracteristicas]
+                );
+            }
+            
+            // Registrar en el log
+            $usuarioId = auth()->id();
+            $usuario = Usuario::find($usuarioId);
+            $nombreUsuario = $usuario->nombres . ' ' . $usuario->apellidos;
+            $accion = "$nombreUsuario actualizó el producto: $nombreProductoAntiguo a {$producto->nombreProducto}";
+            $this->agregarLog($usuarioId, $accion);
+    
+            DB::commit();
+            
+            return response()->json([
+                'message' => 'Producto actualizado correctamente',
+                'producto' => $producto->load(['caracteristicasProducto', 'categoria'])
+            ]);
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'error' => 'Error al actualizar el producto',
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        // Obtener el nombre del producto antes de la actualización
-        $nombreProductoAntiguo = $producto->nombreProducto;
-
-        // Actualizar los datos del producto
-        $producto->nombreProducto = $request->nombreProducto;
-        $producto->descripcion = $request->descripcion;
-        $producto->save();
-
-        // Registrar la acción de actualización del producto en el log
-        $usuarioId = auth()->id(); // Obtener el ID del usuario autenticado
-        $usuario = Usuario::find($usuarioId);
-        $nombreUsuario = $usuario->nombres . ' ' . $usuario->apellidos;
-        $accion = "$nombreUsuario actualizó el producto: $nombreProductoAntiguo a {$producto->nombreProducto}";
-        $this->agregarLog($usuarioId, $accion);
-
-        return response()->json(['message' => 'Producto actualizado correctamente']);
     }
 
     
