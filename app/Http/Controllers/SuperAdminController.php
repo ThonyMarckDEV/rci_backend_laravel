@@ -1476,8 +1476,7 @@ class SuperAdminController extends Controller
      *         )
      *     )
      * )
-     */
-    public function EliminarModelo($idModelo)
+     */ public function EliminarModelo($idModelo)
     {
         try {
             // Begin transaction
@@ -1509,19 +1508,23 @@ class SuperAdminController extends Controller
             // Eliminar todas las imágenes asociadas de la BD
             ImagenModelo::where('idModelo', $idModelo)->delete();
             
+            
             // Eliminar el directorio si se encontró una ruta válida
             if ($directorioABorrar && Storage::disk('public')->exists($directorioABorrar)) {
                 Storage::disk('public')->deleteDirectory($directorioABorrar);
             }
             
-            // Eliminar el modelo
-            $modelo->delete();
+            // Marcar el modelo como "eliminado" en lugar de eliminarlo físicamente
+            $modelo->update([
+                'estado' => 'eliminado', // Cambiar el estado a "eliminado"
+                'urlModelo' => null,     // Eliminar la URL del modelo
+            ]);
             
             // Commit transaction
             DB::commit();
             
             return response()->json([
-                'message' => 'Modelo y sus imágenes eliminados correctamente',
+                'message' => 'Modelo marcado como eliminado, imágenes y stock relacionados eliminados correctamente',
                 'directory_deleted' => $directorioABorrar ?? 'No se encontró directorio para borrar'
             ]);
             
