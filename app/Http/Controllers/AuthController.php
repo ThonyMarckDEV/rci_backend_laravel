@@ -92,103 +92,99 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        // Validar que el correo y la contraseña están presentes
         $request->validate([
             'correo' => 'required|email',
             'password' => 'required|string|min:6',
         ]);
-
-        // Obtener las credenciales de correo y contraseña
+    
         $credentials = [
             'correo' => $request->input('correo'),
             'password' => $request->input('password')
         ];
-
+    
         try {
-            // Buscar el usuario por correo
             $usuario = Usuario::where('correo', $credentials['correo'])->first();
-
-            // Verificar si el usuario existe
+    
             if (!$usuario) {
                 return response()->json(['error' => 'Usuario no encontrado'], 404);
             }
-
-            // Verificar si el usuario está inactivo
+    
             if ($usuario->estado === 'inactivo') {
-                return response()->json(['error' => 'Usuario inactivo. Por favor, contacte al administrador.'], 403);
+                return response()->json(['error' => 'Usuario inactivo'], 403);
             }
-
-            // Intentar autenticar y generar el token JWT usando el campo 'correo'
+    
+            // Generar nuevo token
             if (!$token = JWTAuth::attempt(['correo' => $credentials['correo'], 'password' => $credentials['password']])) {
                 return response()->json(['error' => 'Credenciales inválidas'], 401);
             }
-
-            // Obtener el dispositivo
+    
+            // IMPORTANTE: Primero invalidamos todas las sesiones existentes
+            $this->invalidarSesionesAnteriores($usuario->idUsuario);
+    
             $dispositivo = $this->obtenerDispositivo();
-
-            // Verificar si ya existe un registro en la tabla 'actividad_usuario' para este usuario
-            $actividad = ActividadUsuario::where('idUsuario', $usuario->idUsuario)->first();
-
-            if (!$actividad) {
-                // Si no existe, crear un nuevo registro
-                ActividadUsuario::create([
-                    'idUsuario' => $usuario->idUsuario,
+    
+            // Crear o actualizar el registro de actividad con el nuevo token
+            ActividadUsuario::updateOrCreate(
+                ['idUsuario' => $usuario->idUsuario],
+                [
                     'last_activity' => now(),
                     'dispositivo' => $dispositivo,
                     'jwt' => $token,
-                ]);
-            } else {
-                // Si ya existe, verificar si el dispositivo ha cambiado
-                if ($actividad->dispositivo !== $dispositivo) {
-                    // Si el dispositivo ha cambiado, invalidar el token anterior
-                    if ($actividad->jwt) {
-                        try {
-                            // Configurar el token en JWTAuth
-                            JWTAuth::setToken($actividad->jwt);
-
-                            // Verificar que el token sea válido antes de intentar invalidarlo
-                            if (JWTAuth::check()) {
-                                // Invalidar el token y forzar su expiración
-                                JWTAuth::invalidate(true);
-                            }
-                        } catch (\Exception $e) {
-                            // Registrar el error si la invalidación falla
-                            Log::error('Error al invalidar el token anterior: ' . $e->getMessage());
-                        }
-                    }
-                }
-
-                // Actualizar la actividad con el nuevo dispositivo y token
-                $actividad->update([
-                    'last_activity' => now(),
-                    'dispositivo' => $dispositivo,
-                    'jwt' => $token,  // Asigna el nuevo token
-                ]);
-            }
-
-            // Actualizar el estado del usuario a "loggedOn"
+                    'session_active' => true
+                ]
+            );
+    
+            // Actualizar estado del usuario
             $usuario->update(['status' => 'loggedOn']);
-
-            // Obtener el nombre completo del usuario para el log
+    
+            // Log de la acción
             $nombreUsuario = $usuario->nombres . ' ' . $usuario->apellidos;
-
-            // Definir la acción y mensaje para el log
-            $accion = "$nombreUsuario inició sesión desde el dispositivo: $dispositivo";
-
-            // Llamada a la función agregarLog para registrar el log
-            $this->agregarLog($usuario->idUsuario, $accion);
-
-            return response()->json(compact('token'));
+            $this->agregarLog($usuario->idUsuario, "$nombreUsuario inició sesión desde: $dispositivo");
+    
+            return response()->json([
+                'token' => $token,
+                'message' => 'Login exitoso, sesiones anteriores cerradas'
+            ]);
+    
         } catch (JWTException $e) {
-            return response()->json(['error' => 'No se pudo crear el token'], 500);
+            Log::error('Error en login: ' . $e->getMessage());
+            return response()->json(['error' => 'Error al crear token'], 500);
         }
     }
+    
+    private function invalidarSesionesAnteriores($idUsuario)
+    {
+        try {
+            $actividad = ActividadUsuario::where('idUsuario', $idUsuario)->first();
+            
+            if ($actividad && $actividad->jwt) {
+                // Invalidar en JWT
+                try {
+                    JWTAuth::setToken($actividad->jwt);
+                    JWTAuth::invalidate(true);
+                } catch (\Exception $e) {
+                    Log::error('Error al invalidar JWT: ' . $e->getMessage());
+                }
+    
+                // Marcar como inactiva en la base de datos
+                $actividad->update([
+                    'session_active' => false,
+                    'jwt' => null
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error al invalidar sesiones: ' . $e->getMessage());
+        }
+    }
+    
+  
 
     // Función para obtener el dispositivo
     private function obtenerDispositivo()
     {
         return request()->header('User-Agent');  // Obtiene el User-Agent del encabezado de la solicitud
     }
+
 
 
 
@@ -255,21 +251,21 @@ class AuthController extends Controller
      *     )
      * )
      */
-   public function logout(Request $request)
+    public function logout(Request $request)
     {
         // Validar que el ID del usuario esté presente y sea un entero
         $request->validate([
             'idUsuario' => 'required|integer',
         ]);
-
+ 
         // Buscar el usuario por su ID
         $user = Usuario::where('idUsuario', $request->idUsuario)->first();
-
+ 
         if ($user) {
             try {
                 // Iniciar transacción
                 DB::beginTransaction();
-
+ 
                 // Obtener el token actual de la tabla actividad_usuario
                 $actividad = ActividadUsuario::where('idUsuario', $request->idUsuario)->first();
                 
@@ -278,7 +274,7 @@ class AuthController extends Controller
                         // Configurar el token en JWTAuth
                         $token = $actividad->jwt;
                         JWTAuth::setToken($token);
-
+ 
                         // Verificar que el token sea válido antes de intentar invalidarlo
                         if (JWTAuth::check()) {
                             // Invalidar el token y forzar su expiración
@@ -290,38 +286,38 @@ class AuthController extends Controller
                         Log::error('Error general con el token: ' . $e->getMessage());
                     }
                 }
-
+ 
                 // Actualizar el estado del usuario a "loggedOff"
                 $user->status = 'loggedOff';
                 $user->save();
-
+ 
                 // Limpiar el JWT en la tabla actividad_usuario
                 if ($actividad) {
                     $actividad->jwt = null;
                     $actividad->save();
                 }
-
+ 
                 // Obtener el nombre completo del usuario
                 $nombreUsuario = $user->nombres . ' ' . $user->apellidos;
-
+ 
                 // Definir la acción y mensaje para el log
                 $accion = "$nombreUsuario cerró sesión";
-
+ 
                 // Llamada a la función agregarLog para registrar el log
                 $this->agregarLog($user->idUsuario, $accion);
-
+ 
                 // Confirmar transacción
                 DB::commit();
-
+ 
                 return response()->json([
                     'success' => true, 
                     'message' => 'Usuario deslogueado correctamente'
                 ], 200);
-
+ 
             } catch (\Exception $e) {
                 // Revertir transacción en caso de error
                 DB::rollBack();
-
+ 
                 return response()->json([
                     'success' => false, 
                     'message' => 'No se pudo desloguear al usuario',
@@ -329,13 +325,15 @@ class AuthController extends Controller
                 ], 500);
             }
         }
-
+ 
         return response()->json([
             'success' => false, 
             'message' => 'No se pudo encontrar el usuario'
         ], 404);
     }
+ 
 
+ 
     public function refreshToken(Request $request)
     {
         try {
@@ -365,6 +363,7 @@ class AuthController extends Controller
             return response()->json(['error' => 'No se pudo refrescar el token'], 500);
         }
     }
+ 
 
 
     /**
