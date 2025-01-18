@@ -23,6 +23,8 @@ use App\Http\Controllers\SuperAdminController;
 
        Route::get('/listarCategoriasFiltrador', [SuperAdminController::class, 'listarCategoriasFiltrador']);
 
+       Route::get('/productos/{id}/caracteristicas', [SuperAdminController::class, 'obtenerCaracteristicas']);
+
 //================================================================================================
     //RUTAS  AUTH PROTEGIDAS par todos los roles
 
