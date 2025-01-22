@@ -13,8 +13,7 @@ class CrearTablaLog extends Migration
             $table->unsignedBigInteger('idUsuario');  // Relación con usuarios
             $table->string('nombreUsuario');  // Nombre completo del usuario
             $table->string('rol');  // Rol del usuario
-            $table->string('accion');  // Acción realizada
-            $table->timestamp('fecha');  // Fecha de la acción
+            $table->text('fecha');  // Fecha de la acción
             $table->foreign('idUsuario')->references('idUsuario')->on('usuarios')->onDelete('cascade');  // Relación con la tabla usuarios
         });
     }
