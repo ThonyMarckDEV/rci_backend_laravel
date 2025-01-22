@@ -1144,12 +1144,6 @@ class SuperAdminController extends Controller
     public function listarProductosFavoritos(Request $request)
     {
         try {
-            // Validar parámetros de entrada
-            $request->validate([
-                'favoritos' => 'required|array', // Lista de nombres de productos favoritos
-                'favoritos.*' => 'string|max:255', // Cada nombre debe ser un string
-            ]);
-    
             // Obtener parámetros validados
             $favoritos = $request->input('favoritos', []);
     
