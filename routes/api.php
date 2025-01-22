@@ -19,7 +19,7 @@ use App\Http\Controllers\SuperAdminController;
    
        Route::get('/listarProductosCatalogo', [SuperAdminController::class, 'listarProductosCatalogo']);
 
-       Route::get('/listarProductosFavoritos', [SuperAdminController::class, 'listarProductosFavoritos']);
+       Route::post('/listarProductosFavoritos', [SuperAdminController::class, 'listarProductosFavoritos']);
 
        Route::get('/listarCategorias', [SuperAdminController::class, 'listarCategorias']);
 

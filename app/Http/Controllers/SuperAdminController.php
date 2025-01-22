@@ -1143,69 +1143,78 @@ class SuperAdminController extends Controller
 
     public function listarProductosFavoritos(Request $request)
     {
-        // Validar parámetros de entrada
-        $request->validate([
-            'favoritos' => 'required|array', // Lista de nombres de productos favoritos
-            'favoritos.*' => 'string|max:255', // Cada nombre debe ser un string
-            'perPage' => 'nullable|integer|min:1|max:100', // Paginación
-        ]);
+        try {
+            // Validar parámetros de entrada
+            $request->validate([
+                'favoritos' => 'required|array', // Lista de nombres de productos favoritos
+                'favoritos.*' => 'string|max:255', // Cada nombre debe ser un string
+            ]);
     
-        // Obtener parámetros validados
-        $favoritos = $request->input('favoritos', []); // Lista de nombres de productos favoritos
-        $perPage = $request->input('perPage', 5); // Cantidad de productos por página (5 por defecto)
+            // Obtener parámetros validados
+            $favoritos = $request->input('favoritos', []);
     
-        // Construir la consulta de productos con relaciones
-        $query = Producto::with([
-            'categoria:idCategoria,nombreCategoria,estado',  // Relación con la categoría (incluir estado)
-            'modelos' => function($query) {
-                $query->with([
-                    'imagenes:idImagen,urlImagen,idModelo'  // Relación con las imágenes
-                ]);
-            }
-        ]);
+            // Construir la consulta de productos con relaciones
+            $query = Producto::with([
+                'categoria:idCategoria,nombreCategoria,estado',
+                'modelos' => function($query) {
+                    $query->with([
+                        'imagenes:idImagen,urlImagen,idModelo'
+                    ]);
+                }
+            ]);
     
-        // Filtrar solo productos activos, de categorías activas y que estén en la lista de favoritos
-        $query->where('estado', 'activo')
-            ->whereHas('categoria', function($q) {
-                $q->where('estado', 'activo');  // Filtrar categorías activas
-            })
-            ->whereIn('nombreProducto', $favoritos); // Filtrar por nombres de productos favoritos
-    
-        // Ejecutar paginación
-        $productos = $query->paginate($perPage);
-    
-        // Formatear la respuesta
-        $productosData = $productos->map(function($producto) {
-            return [
-                'idProducto' => $producto->idProducto,
-                'nombreProducto' => $producto->nombreProducto,
-                'descripcion' => $producto->descripcion ?: 'N/A',
-                'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
-                'modelos' => $producto->modelos->map(function($modelo) {
-                    return [
-                        'idModelo' => $modelo->idModelo,
-                        'nombreModelo' => $modelo->nombreModelo,
-                        'imagenes' => $modelo->imagenes->map(function($imagen) {
-                            return [
-                                'idImagen' => $imagen->idImagen,
-                                'urlImagen' => $imagen->urlImagen
-                            ];
-                        })
-                    ];
+            // Filtrar solo productos activos, de categorías activas y que estén en la lista de favoritos
+            $query->where('estado', 'activo')
+                ->whereHas('categoria', function($q) {
+                    $q->where('estado', 'activo');
                 })
-            ];
-        });
+                ->whereIn('nombreProducto', $favoritos);
     
-        // Retornar JSON con productos filtrados y paginados
-        return response()->json([
-            'data' => $productosData,
-            'current_page' => $productos->currentPage(),
-            'last_page' => $productos->lastPage(),
-            'per_page' => $productos->perPage(),
-            'total' => $productos->total(),
-        ], 200);
+            // Obtener todos los productos sin paginación
+            $productos = $query->get();
+    
+            // Formatear la respuesta
+            $productosData = $productos->map(function($producto) {
+                return [
+                    'idProducto' => $producto->idProducto,
+                    'nombreProducto' => $producto->nombreProducto,
+                    'descripcion' => $producto->descripcion ?: 'N/A',
+                    'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
+                    'modelos' => $producto->modelos->map(function($modelo) {
+                        return [
+                            'idModelo' => $modelo->idModelo,
+                            'nombreModelo' => $modelo->nombreModelo,
+                            'imagenes' => $modelo->imagenes->map(function($imagen) {
+                                return [
+                                    'idImagen' => $imagen->idImagen,
+                                    'urlImagen' => $imagen->urlImagen
+                                ];
+                            })
+                        ];
+                    })
+                ];
+            });
+    
+            // Retornar JSON con todos los productos
+            return response()->json([
+                'data' => $productosData,
+            ], 200);
+    
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Manejar errores de validación y devolver un JSON
+            return response()->json([
+                'error' => 'Error de validación',
+                'messages' => $e->errors(),
+            ], 422);
+    
+        } catch (\Exception $e) {
+            // Manejar otros errores y devolver un JSON
+            return response()->json([
+                'error' => 'Error en el servidor',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
-    
 
 
     /**
