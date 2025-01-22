@@ -13,7 +13,7 @@ class CrearTablaLastActividadUsuario extends Migration
             $table->unsignedBigInteger('idUsuario');
             $table->timestamp('last_activity')->nullable();
             $table->string('dispositivo')->nullable(); // Agregar campo 'dispositivo'
-            $table->string('jwt')->nullable(); // Agregar campo 'jwt'
+            $table->text('jwt')->nullable();
             // Definir la clave foránea que hace referencia a `idUsuario` en la tabla `usuarios`
             $table->foreign('idUsuario')->references('idUsuario')->on('usuarios')->onDelete('cascade');
         });
