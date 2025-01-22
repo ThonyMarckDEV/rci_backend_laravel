@@ -1907,16 +1907,26 @@ class SuperAdminController extends Controller
             'descripcion' => 'nullable|string|max:60',
             'imagen' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:5000', // Validación de imagen
         ]);
-
+    
         // Obtener el nombre de la categoría
         $nombreCategoria = $request->input('nombreCategoria');
+    
+        // Verificar si ya existe una categoría con el mismo nombre
+        $categoriaExistente = Categoria::where('nombreCategoria', $nombreCategoria)->first();
+        if ($categoriaExistente) {
+            return response()->json([
+                'message' => 'Error: Ya existe una categoría con el mismo nombre.',
+                'categoriaExistente' => $categoriaExistente,
+            ], 409); // 409 Conflict
+        }
+    
         $descripcion = $request->input('descripcion', null);
-
+    
         // Guardar la imagen en el directorio correspondiente
         $imagen = $request->file('imagen');
         $rutaImagen = 'imagenes/categorias/' . $nombreCategoria . '/' . $imagen->getClientOriginalName();
         Storage::disk('public')->putFileAs('imagenes/categorias/' . $nombreCategoria, $imagen, $imagen->getClientOriginalName());
-
+    
         // Crear la categoría en la base de datos
         $categoria = Categoria::create([
             'nombreCategoria' => $nombreCategoria,
@@ -1924,21 +1934,7 @@ class SuperAdminController extends Controller
             'imagen' => $rutaImagen, // Guardar la ruta de la imagen
             'estado' => 'activo'
         ]);
-
-        // Obtener el ID del usuario autenticado desde el token
-        $usuarioId = auth()->id(); // Obtiene el ID del usuario autenticado
-
-        // Obtener el nombre completo del usuario autenticado
-        $usuario = Usuario::find($usuarioId);
-        $nombreUsuario = $usuario->nombres . ' ' . $usuario->apellidos;
-
-        // Definir la acción y mensaje para el log
-        $accion = "$nombreUsuario agregó una nueva categoría: $nombreCategoria con descripción: $descripcion";
-
-        // Llamada a la función agregarLog para registrar el log
-        $this->agregarLog($usuarioId, $accion);
-
-        // Retornar una respuesta exitosa con la categoría agregada
+    
         return response()->json([
             'message' => 'Categoría agregada exitosamente',
             'categoria' => $categoria
