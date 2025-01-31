@@ -52,14 +52,14 @@ class DashboardController extends Controller
      */
     public function obtenerInfoAdmins()
     {
-        $activeUsers = Usuario::where('estado', 'activo')->count();
-        $inactiveUsers = Usuario::where('estado', 'inactivo')->count();
-        $totalUsers = $activeUsers + $inactiveUsers;
+        $activeAdmins = Usuario::where('rol', 'admin')->where('estado', 'activo')->count();
+        $inactiveAdmins = Usuario::where('rol', 'admin')->where('estado', 'inactivo')->count();
+        $totalUsers = $activeAdmins + $inactiveAdmins;
 
         return response()->json([
             'stats' => [
-                'active_users' => $activeUsers,
-                'inactive_users' => $inactiveUsers,
+                'active_users' => $activeAdmins,
+                'inactive_users' => $inactiveAdmins,
                 'total_users' => $totalUsers
             ],
             'message' => 'User statistics retrieved successfully'
