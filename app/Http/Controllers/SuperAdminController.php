@@ -743,7 +743,6 @@ class SuperAdminController extends Controller
                 'nombreProducto' => 'required',
                 'descripcion' => 'nullable',
                 'estado' => 'required',
-                'precio' => 'required',
                 'idCategoria' => 'required|exists:categorias,idCategoria',
                 'modelos' => 'required|array',
                 'modelos.*.nombreModelo' => 'required',
@@ -767,7 +766,6 @@ class SuperAdminController extends Controller
             $producto = Producto::create([
                 'nombreProducto' => $request->nombreProducto,
                 'descripcion' => $request->descripcion,
-                'precio' => $request->precio,
                 'estado' => $request->estado,
                 'idCategoria' => $request->idCategoria,
             ]);
@@ -1210,6 +1208,93 @@ class SuperAdminController extends Controller
         }
     }
 
+    public function listarProductosRelacionados($productoId)
+    {
+        try {
+            // Verificar si el productoId está presente
+            if (!$productoId) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Producto ID es requerido'
+                ], 400);
+            }
+    
+            // Buscar el producto seleccionado
+            $productoSeleccionado = Producto::find($productoId);
+            if (!$productoSeleccionado) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Producto no encontrado'
+                ], 404);
+            }
+    
+            // Obtener la categoría del producto seleccionado
+            $categoriaId = $productoSeleccionado->idCategoria;
+    
+            // Consulta para obtener productos relacionados
+            $query = Producto::with([
+                'categoria:idCategoria,nombreCategoria,estado',
+                'modelos' => function($query) {
+                    $query->with([
+                        'imagenes:idImagen,urlImagen,idModelo'
+                    ]);
+                }
+            ]);
+    
+            $query->where('estado', 'activo')
+                ->whereHas('categoria', function($q) {
+                    $q->where('estado', 'activo');
+                })
+                ->where('idCategoria', $categoriaId)
+                ->where('idProducto', '!=', $productoId);  // Excluir el producto actual
+    
+            // Obtener los productos relacionados
+            $productos = $query->get();
+    
+            // Si no hay productos relacionados, devolver un array vacío
+            if ($productos->isEmpty()) {
+                return response()->json([
+                    'status' => 'success',
+                    'productos' => []
+                ]);
+            }
+    
+            // Formatear los datos de los productos
+            $productosData = $productos->map(function($producto) {
+                return [
+                    'idProducto' => $producto->idProducto,
+                    'nombreProducto' => $producto->nombreProducto,
+                    'descripcion' => $producto->descripcion ?: 'N/A',
+                    'nombreCategoria' => $producto->categoria ? $producto->categoria->nombreCategoria : 'Sin Categoría',
+                    'modelos' => $producto->modelos->map(function($modelo) {
+                        return [
+                            'idModelo' => $modelo->idModelo,
+                            'nombreModelo' => $modelo->nombreModelo,
+                            'imagenes' => $modelo->imagenes->map(function($imagen) {
+                                return [
+                                    'idImagen' => $imagen->idImagen,
+                                    'urlImagen' => $imagen->urlImagen
+                                ];
+                            })
+                        ];
+                    })
+                ];
+            });
+    
+            return response()->json([
+                'status' => 'success',
+                'productos' => $productosData
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error al obtener productos relacionados: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error al obtener productos relacionados. Por favor intente nuevamente más tarde.'
+            ], 500);
+        }
+    }
+    
+    
 
     /**
      * @OA\Post(
@@ -1546,7 +1631,8 @@ class SuperAdminController extends Controller
      *         )
      *     )
      * )
-     */ public function EliminarModelo($idModelo)
+     */
+    public function EliminarModelo($idModelo)
     {
         try {
             // Begin transaction
@@ -1578,23 +1664,19 @@ class SuperAdminController extends Controller
             // Eliminar todas las imágenes asociadas de la BD
             ImagenModelo::where('idModelo', $idModelo)->delete();
             
-            
             // Eliminar el directorio si se encontró una ruta válida
             if ($directorioABorrar && Storage::disk('public')->exists($directorioABorrar)) {
                 Storage::disk('public')->deleteDirectory($directorioABorrar);
             }
             
-            // Marcar el modelo como "eliminado" en lugar de eliminarlo físicamente
-            $modelo->update([
-                'estado' => 'eliminado', // Cambiar el estado a "eliminado"
-                'urlModelo' => null,     // Eliminar la URL del modelo
-            ]);
+            // Eliminar el modelo físicamente de la base de datos
+            $modelo->delete();
             
             // Commit transaction
             DB::commit();
             
             return response()->json([
-                'message' => 'Modelo marcado como eliminado, imágenes y stock relacionados eliminados correctamente',
+                'message' => 'Modelo, imágenes y directorio relacionados eliminados correctamente',
                 'directory_deleted' => $directorioABorrar ?? 'No se encontró directorio para borrar'
             ]);
             
