@@ -2700,32 +2700,36 @@ class SuperAdminController extends Controller
                 Log::info('Descripción de la categoría actualizada', ['nueva_descripcion' => $categoria->descripcion]);
             }
     
-            // Actualización de la imagen
+             // Actualización de la imagen
             if ($request->hasFile('imagen')) {
                 Log::info('Procesando nueva imagen');
-    
-                $oldFolder = str_replace(' ', '_', $categoria->nombreCategoria);
-                $newFolder = str_replace(' ', '_', $categoria->nombreCategoria);
+
+                $oldFolder = $categoria->nombreCategoria;
+                $newFolder = $categoria->nombreCategoria;
                 $oldBasePath = "imagenes/categorias/{$oldFolder}";
                 $newBasePath = "imagenes/categorias/{$newFolder}";
-    
+
                 // Eliminar la imagen anterior si existe
                 if ($categoria->imagen && Storage::disk('public')->exists($categoria->imagen)) {
                     Storage::disk('public')->delete($categoria->imagen);
                     Log::info('Imagen anterior eliminada', ['path' => $categoria->imagen]);
                 }
-    
+
                 // Guardar nueva imagen
                 $imagePath = $request->file('imagen')->store("imagenes/categorias/{$newFolder}", 'public');
                 $categoria->imagen = $imagePath;
                 $categoria->save();
-    
+
                 // Registro para la imagen
+                $nombreUsuario = auth()->user()->name ?? 'Usuario desconocido'; // Definir nombre de usuario
+                $usuarioId = auth()->id() ?? null;
                 $accion = "$nombreUsuario actualizó la imagen de la categoría.";
                 $this->agregarLog($usuarioId, $accion);
+
                 Log::info('Nueva imagen guardada', ['path' => $categoria->imagen]);
             }
-    
+
+
             // Respuesta exitosa
             return response()->json([
                 'message' => 'Categoría actualizada exitosamente',
